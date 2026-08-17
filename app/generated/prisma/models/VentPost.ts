@@ -262,6 +262,7 @@ export type VentPostOrderByWithRelationInput = {
   hugsCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
+  _relevance?: Prisma.VentPostOrderByRelevanceInput
 }
 
 export type VentPostWhereUniqueInput = Prisma.AtLeast<{
@@ -405,6 +406,12 @@ export type VentPostOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type VentPostOrderByRelevanceInput = {
+  fields: Prisma.VentPostOrderByRelevanceFieldEnum | Prisma.VentPostOrderByRelevanceFieldEnum[]
+  sort: Prisma.SortOrder
+  search: string
+}
+
 export type VentPostCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -520,6 +527,7 @@ export type VentPostCreateOrConnectWithoutUserInput = {
 
 export type VentPostCreateManyUserInputEnvelope = {
   data: Prisma.VentPostCreateManyUserInput | Prisma.VentPostCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type VentPostUpsertWithWhereUniqueWithoutUserInput = {
@@ -612,31 +620,7 @@ export type VentPostSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["ventPost"]>
 
-export type VentPostSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  userId?: boolean
-  anonymousName?: boolean
-  avatar?: boolean
-  content?: boolean
-  category?: boolean
-  mood?: boolean
-  hugsCount?: boolean
-  createdAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["ventPost"]>
 
-export type VentPostSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  userId?: boolean
-  anonymousName?: boolean
-  avatar?: boolean
-  content?: boolean
-  category?: boolean
-  mood?: boolean
-  hugsCount?: boolean
-  createdAt?: boolean
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["ventPost"]>
 
 export type VentPostSelectScalar = {
   id?: boolean
@@ -652,12 +636,6 @@ export type VentPostSelectScalar = {
 
 export type VentPostOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "anonymousName" | "avatar" | "content" | "category" | "mood" | "hugsCount" | "createdAt", ExtArgs["result"]["ventPost"]>
 export type VentPostInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}
-export type VentPostIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}
-export type VentPostIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
@@ -794,30 +772,6 @@ export interface VentPostDelegate<ExtArgs extends runtime.Types.Extensions.Inter
   createMany<T extends VentPostCreateManyArgs>(args?: Prisma.SelectSubset<T, VentPostCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
-   * Create many VentPosts and returns the data saved in the database.
-   * @param {VentPostCreateManyAndReturnArgs} args - Arguments to create many VentPosts.
-   * @example
-   * // Create many VentPosts
-   * const ventPost = await prisma.ventPost.createManyAndReturn({
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Create many VentPosts and only return the `id`
-   * const ventPostWithIdOnly = await prisma.ventPost.createManyAndReturn({
-   *   select: { id: true },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  createManyAndReturn<T extends VentPostCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, VentPostCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VentPostPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-  /**
    * Delete a VentPost.
    * @param {VentPostDeleteArgs} args - Arguments to delete one VentPost.
    * @example
@@ -880,36 +834,6 @@ export interface VentPostDelegate<ExtArgs extends runtime.Types.Extensions.Inter
    * 
    */
   updateMany<T extends VentPostUpdateManyArgs>(args: Prisma.SelectSubset<T, VentPostUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
-
-  /**
-   * Update zero or more VentPosts and returns the data updated in the database.
-   * @param {VentPostUpdateManyAndReturnArgs} args - Arguments to update many VentPosts.
-   * @example
-   * // Update many VentPosts
-   * const ventPost = await prisma.ventPost.updateManyAndReturn({
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Update zero or more VentPosts and only return the `id`
-   * const ventPostWithIdOnly = await prisma.ventPost.updateManyAndReturn({
-   *   select: { id: true },
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  updateManyAndReturn<T extends VentPostUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, VentPostUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VentPostPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one VentPost.
@@ -1343,28 +1267,7 @@ export type VentPostCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * The data used to create many VentPosts.
    */
   data: Prisma.VentPostCreateManyInput | Prisma.VentPostCreateManyInput[]
-}
-
-/**
- * VentPost createManyAndReturn
- */
-export type VentPostCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the VentPost
-   */
-  select?: Prisma.VentPostSelectCreateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the VentPost
-   */
-  omit?: Prisma.VentPostOmit<ExtArgs> | null
-  /**
-   * The data used to create many VentPosts.
-   */
-  data: Prisma.VentPostCreateManyInput | Prisma.VentPostCreateManyInput[]
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.VentPostIncludeCreateManyAndReturn<ExtArgs> | null
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1409,36 +1312,6 @@ export type VentPostUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Limit how many VentPosts to update.
    */
   limit?: number
-}
-
-/**
- * VentPost updateManyAndReturn
- */
-export type VentPostUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the VentPost
-   */
-  select?: Prisma.VentPostSelectUpdateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the VentPost
-   */
-  omit?: Prisma.VentPostOmit<ExtArgs> | null
-  /**
-   * The data used to update VentPosts.
-   */
-  data: Prisma.XOR<Prisma.VentPostUpdateManyMutationInput, Prisma.VentPostUncheckedUpdateManyInput>
-  /**
-   * Filter which VentPosts to update
-   */
-  where?: Prisma.VentPostWhereInput
-  /**
-   * Limit how many VentPosts to update.
-   */
-  limit?: number
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.VentPostIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

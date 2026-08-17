@@ -9,6 +9,8 @@ export default defineConfig({
   },
 
   datasource: {
-    url: process.env.DATABASE_URL || "file:./dev.db",
+    url:
+      process.env.DATABASE_URL ||
+      "mysql://amandeepsharma:Ishu%401310@localhost:3306/onehourfriend",
   },
 });

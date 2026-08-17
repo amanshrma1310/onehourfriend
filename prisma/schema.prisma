@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
 }
 
 model User {
@@ -13,7 +13,7 @@ model User {
   email                   String?               @unique
   passwordHash            String?
   avatar                  String                @default("🌙")
-  bio                     String                @default("Here to have meaningful conversations.")
+  bio                     String?               @db.Text
   activeRole              String                @default("PROBLEM_FACER") // PROBLEM_FACER, GUIDER, CASUAL_CHILL
   preferredIntent         String                @default("PEACE") // PEACE, GUIDANCE, CASUAL, SPARK
   preferredSocialGroup    String                @default("OPEN") // OPEN, BOYS, GIRLS, STUDENTS, NIGHT_OWLS, TECH
@@ -74,7 +74,7 @@ model ConversationSession {
   socialGroup     String        @default("OPEN")
   topic           String        @default("General")
   mood            String        @default("General")
-  problemSummary  String?
+  problemSummary  String?       @db.Text
   status          String        @default("ACTIVE")
   matchedAt       DateTime?     @default(now())
   startedAt       DateTime?     @default(now())
@@ -101,7 +101,7 @@ model Message {
   id        String              @id @default(cuid())
   sessionId String
   userId    String
-  content   String
+  content   String              @db.Text
   type      String              @default("TEXT")
   createdAt DateTime            @default(now())
   session   ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -118,7 +118,7 @@ model Rating {
   toUserId   String
   value      Int                 @default(5)
   badges     String?
-  comment    String?
+  comment    String?             @db.Text
   createdAt  DateTime            @default(now())
   fromUser   User                @relation("RatingsGiven", fields: [fromUserId], references: [id])
   session    ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -144,7 +144,7 @@ model FriendMessage {
   id           String     @id @default(cuid())
   friendshipId String
   senderId     String
-  content      String
+  content      String     @db.Text
   createdAt    DateTime   @default(now())
   friendship   Friendship @relation(fields: [friendshipId], references: [id], onDelete: Cascade)
   sender       User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
@@ -169,7 +169,7 @@ model Report {
   reporterId     String
   reportedUserId String
   reason         String
-  description    String?
+  description    String?   @db.Text
   status         String    @default("PENDING")
   createdAt      DateTime  @default(now())
   reviewedAt     DateTime?
@@ -187,7 +187,7 @@ model MatchQueue {
   intent         String   @default("PEACE")
   socialGroup    String   @default("OPEN")
   mood           String   @default("General")
-  problemSummary String?
+  problemSummary String?  @db.Text
   enteredAt      DateTime @default(now())
 
   @@index([role, intent, socialGroup])
@@ -198,7 +198,7 @@ model VentPost {
   userId        String
   anonymousName String
   avatar        String   @default("🌙")
-  content       String
+  content       String   @db.Text
   category      String   @default("Peace & Healing")
   mood          String   @default("Need to vent")
   hugsCount     Int      @default(0)
@@ -210,7 +210,7 @@ model VentPost {
 
 model DailyQuestion {
   id           String        @id @default(cuid())
-  question     String
+  question     String        @db.Text
   category     String        @default("Deep Thoughts")
   date         String        @unique
   totalAnswers Int           @default(0)
@@ -224,7 +224,7 @@ model DailyAnswer {
   userId        String
   anonymousName String
   avatar        String        @default("✨")
-  answer        String
+  answer        String        @db.Text
   likesCount    Int           @default(0)
   createdAt     DateTime      @default(now())
   question      DailyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)

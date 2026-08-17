@@ -1,88 +1,100 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { INTENT_ZONES, SOCIAL_GROUPS, MOODS } from "@/lib/data";
 import {
-  INTENT_ZONES,
-  SOCIAL_GROUPS,
-  MOODS,
-  AVATARS,
-  DAILY_QUESTIONS,
-} from "@/lib/data";
-import {
-  Sparkles,
-  ShieldCheck,
-  Clock,
+  Compass,
   Heart,
   MessageSquare,
+  Sparkles,
   Users,
-  Compass,
-  User,
+  ShieldCheck,
+  Zap,
+  ArrowRight,
   LogOut,
   Send,
-  ArrowRight,
-  Flame,
-  CheckCircle2,
-  X,
+  Plus,
   Search,
-  Dices,
+  SlidersHorizontal,
+  Home,
+  X,
+  Radio,
+  Phone,
+  Video,
+  CheckCheck,
+  Flame,
 } from "lucide-react";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"match" | "community" | "friends" | "profile">("match");
 
-  // Matching configuration state
-  const [activeRole, setActiveRole] = useState<string>("PROBLEM_FACER");
-  const [selectedIntent, setSelectedIntent] = useState<string>("PEACE");
-  const [selectedSocialGroup, setSelectedSocialGroup] = useState<string>("OPEN");
-  const [selectedMood, setSelectedMood] = useState<string>("Stressed & Overwhelmed");
-  const [problemSummary, setProblemSummary] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"chat_home" | "circles" | "friends" | "vent" | "daily_q">("chat_home");
 
-  // Radar Matchmaker Modal State
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchSeconds, setSearchSeconds] = useState(0);
-  const searchTimerRef = useRef<any>(null);
+  // Category Matchmaker Modal
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedIntent, setSelectedIntent] = useState("PEACE");
+  const [selectedMood, setSelectedMood] = useState("Stressed & Overwhelmed");
+  const [selectedSocialGroup, setSelectedSocialGroup] = useState("OPEN");
+  const [activeRole, setActiveRole] = useState("PROBLEM_FACER");
 
-  // Active Session (if any)
-  const [activeSession, setActiveSession] = useState<any>(null);
+  // Live Radar Matchmaking State
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchStatus, setMatchStatus] = useState<string>("Scanning for compatible active stranger...");
+  const [matchSearchSeconds, setMatchSearchSeconds] = useState(0);
 
-  // Community state
+  // Friends & DMs State
+  const [friends, setFriends] = useState<any[]>([]);
+  const [activeFriendship, setActiveFriendship] = useState<any>(null);
+  const [friendMessages, setFriendMessages] = useState<any[]>([]);
+  const [newFriendMessage, setNewFriendMessage] = useState("");
+
+  // Vent Wall State
   const [ventPosts, setVentPosts] = useState<any[]>([]);
   const [newVentContent, setNewVentContent] = useState("");
+  const [newVentCategory, setNewVentCategory] = useState("Peace & Healing");
+
+  // Daily Question State
   const [dailyQuestion, setDailyQuestion] = useState<any>(null);
-  const [dailyAnswer, setDailyAnswer] = useState("");
+  const [dailyAnswers, setDailyAnswers] = useState<any[]>([]);
+  const [myAnswer, setMyAnswer] = useState("");
 
-  // Friends & DM state
-  const [friends, setFriends] = useState<any[]>([]);
-  const [selectedFriend, setSelectedFriend] = useState<any>(null);
-  const [friendMessages, setFriendMessages] = useState<any[]>([]);
-  const [newFriendMsg, setNewFriendMsg] = useState("");
+  // Search Filter
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Load User Data & Active Session
+  // Online Active Avatars Strip (From Image)
+  const ONLINE_ACTIVE_PEOPLE = [
+    { name: "Alex", avatar: "👨‍💻", intent: "GUIDANCE", mood: "Tech Roadmaps" },
+    { name: "Isabella", avatar: "🌸", intent: "PEACE", mood: "Overthinking" },
+    { name: "Karla", avatar: "🎨", intent: "CASUAL", mood: "Late Night Music" },
+    { name: "Ethan", avatar: "⚡", intent: "GUIDANCE", mood: "Career Switch" },
+    { name: "Harper", avatar: "🌙", intent: "PEACE", mood: "Need to Vent" },
+    { name: "Zack", avatar: "🎮", intent: "CASUAL", mood: "Gaming & Anime" },
+    { name: "Maya", avatar: "✨", intent: "SPARK", mood: "Fun Banter" },
+  ];
+
   useEffect(() => {
-    fetchUserData();
+    loadUserData();
+    loadFriends();
+    loadVentWall();
+    loadDailyQuestion();
   }, []);
 
-  async function fetchUserData() {
+  async function loadUserData() {
     try {
       const res = await fetch("/api/auth/me");
       const data = await res.json();
-
-      if (!data.authenticated || !data.user) {
+      if (!res.ok || !data.user) {
         router.push("/login");
         return;
       }
-
-      setUser(data.user);
-      setActiveRole(data.user.activeRole || "PROBLEM_FACER");
-      setSelectedIntent(data.user.preferredIntent || "PEACE");
-      setSelectedSocialGroup(data.user.preferredSocialGroup || "OPEN");
-      setSelectedMood(data.user.mood || "Stressed & Overwhelmed");
-      setActiveSession(data.activeSession || null);
+      setCurrentUser(data.user);
+      if (data.activeSession) {
+        router.push(`/chat/${data.activeSession.id}`);
+      }
     } catch {
       router.push("/login");
     } finally {
@@ -90,46 +102,25 @@ export default function Dashboard() {
     }
   }
 
-  // Load Community Data when tab is selected
-  useEffect(() => {
-    if (activeTab === "community") {
-      loadCommunityData();
-    } else if (activeTab === "friends") {
-      loadFriendsData();
-    }
-  }, [activeTab]);
-
-  async function loadCommunityData() {
-    try {
-      const [ventRes, qRes] = await Promise.all([
-        fetch("/api/community/vent"),
-        fetch("/api/community/daily-question"),
-      ]);
-      const ventData = await ventRes.json();
-      const qData = await qRes.json();
-
-      if (ventData.posts) setVentPosts(ventData.posts);
-      if (qData.question) setDailyQuestion(qData.question);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  async function loadFriendsData() {
+  async function loadFriends() {
     try {
       const res = await fetch("/api/friends");
       const data = await res.json();
-      if (data.friends) setFriends(data.friends);
+      if (data.friends) {
+        setFriends(data.friends);
+        if (data.friends.length > 0 && !activeFriendship) {
+          setActiveFriendship(data.friends[0]);
+          loadFriendChat(data.friends[0].id);
+        }
+      }
     } catch (e) {
       console.error(e);
     }
   }
 
-  // Open Friend Direct Chat
-  async function openFriendChat(friendItem: any) {
-    setSelectedFriend(friendItem);
+  async function loadFriendChat(friendshipId: string) {
     try {
-      const res = await fetch(`/api/friends/${friendItem.friendshipId}/messages`);
+      const res = await fetch(`/api/friends/${friendshipId}/messages`);
       const data = await res.json();
       if (data.messages) setFriendMessages(data.messages);
     } catch (e) {
@@ -137,28 +128,119 @@ export default function Dashboard() {
     }
   }
 
-  async function sendFriendMessage(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newFriendMsg.trim() || !selectedFriend) return;
+  async function loadVentWall() {
+    try {
+      const res = await fetch("/api/community/vent");
+      const data = await res.json();
+      if (data.posts) setVentPosts(data.posts);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function loadDailyQuestion() {
+    try {
+      const res = await fetch("/api/community/daily-question");
+      const data = await res.json();
+      if (data.question) setDailyQuestion(data.question);
+      if (data.answers) setDailyAnswers(data.answers);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleStartMatchmaking(fallbackToCompanion: boolean = false, customIntent?: string, customMood?: string) {
+    setShowCategoryModal(false);
+    setIsMatching(true);
+    setMatchSearchSeconds(0);
+    setMatchStatus(fallbackToCompanion ? "Connecting to AI Empathetic Companion..." : "Scanning radar for an active partner...");
+
+    const intentToUse = customIntent || selectedIntent;
+    const moodToUse = customMood || selectedMood;
 
     try {
-      const res = await fetch(`/api/friends/${selectedFriend.friendshipId}/messages`, {
+      const res = await fetch("/api/match/queue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newFriendMsg.trim() }),
+        body: JSON.stringify({
+          role: activeRole,
+          intent: intentToUse,
+          socialGroup: selectedSocialGroup,
+          mood: moodToUse,
+          fallbackToCompanion,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.sessionId) {
+        router.push(`/chat/${data.sessionId}`);
+        return;
+      }
+
+      const interval = setInterval(async () => {
+        setMatchSearchSeconds((s) => s + 1);
+        try {
+          const pollRes = await fetch("/api/match/status");
+          const pollData = await pollRes.json();
+          if (pollData.sessionId) {
+            clearInterval(interval);
+            router.push(`/chat/${pollData.sessionId}`);
+          }
+        } catch {}
+      }, 2000);
+    } catch (err: any) {
+      alert(err.message || "Failed to start matchmaker");
+      setIsMatching(false);
+    }
+  }
+
+  async function handleCancelMatch() {
+    await fetch("/api/match/cancel", { method: "POST" });
+    setIsMatching(false);
+  }
+
+  async function handleSendFriendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newFriendMessage.trim() || !activeFriendship) return;
+
+    try {
+      const res = await fetch(`/api/friends/${activeFriendship.id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newFriendMessage.trim() }),
       });
       const data = await res.json();
       if (data.message) {
         setFriendMessages((prev) => [...prev, data.message]);
-        setNewFriendMsg("");
+        setNewFriendMessage("");
       }
     } catch (e) {
       console.error(e);
     }
   }
 
-  // Send a Hug on Vent Wall
-  async function sendHug(postId: string) {
+  async function handlePostVent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newVentContent.trim()) return;
+
+    try {
+      const res = await fetch("/api/community/vent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newVentContent.trim(), category: newVentCategory }),
+      });
+      const data = await res.json();
+      if (data.post) {
+        setVentPosts((prev) => [data.post, ...prev]);
+        setNewVentContent("");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleHugVent(postId: string) {
     try {
       const res = await fetch("/api/community/vent", {
         method: "POST",
@@ -176,782 +258,853 @@ export default function Dashboard() {
     }
   }
 
-  // Post to Vent Wall
-  async function submitVentPost(e: React.FormEvent) {
+  async function handlePostDailyAnswer(e: React.FormEvent) {
     e.preventDefault();
-    if (!newVentContent.trim()) return;
-
-    try {
-      const res = await fetch("/api/community/vent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: newVentContent.trim(),
-          category: selectedIntent === "PEACE" ? "Peace & Healing" : "General Thought",
-          mood: selectedMood,
-        }),
-      });
-      const data = await res.json();
-      if (data.post) {
-        setVentPosts((prev) => [data.post, ...prev]);
-        setNewVentContent("");
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  // Submit Answer to Daily Question
-  async function submitDailyAnswer(e: React.FormEvent) {
-    e.preventDefault();
-    if (!dailyAnswer.trim() || !dailyQuestion) return;
+    if (!myAnswer.trim() || !dailyQuestion) return;
 
     try {
       const res = await fetch("/api/community/daily-question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId: dailyQuestion.id,
-          answer: dailyAnswer.trim(),
-        }),
+        body: JSON.stringify({ questionId: dailyQuestion.id, answer: myAnswer.trim() }),
       });
       const data = await res.json();
       if (data.answer) {
-        setDailyQuestion((prev: any) => ({
-          ...prev,
-          answers: [data.answer, ...(prev.answers || [])],
-        }));
-        setDailyAnswer("");
+        setDailyAnswers((prev) => [data.answer, ...prev]);
+        setMyAnswer("");
       }
     } catch (e) {
       console.error(e);
     }
   }
 
-  // Logout handler
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
   }
 
-  // Matchmaking: Start Search
-  async function startMatchmaking(forceCompanion = false) {
-    setIsSearching(true);
-    setSearchSeconds(0);
-
-    try {
-      const res = await fetch("/api/match/queue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: activeRole,
-          intent: selectedIntent,
-          socialGroup: selectedSocialGroup,
-          mood: selectedMood,
-          problemSummary,
-          fallbackToCompanion: forceCompanion,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.matched && data.sessionId) {
-        setIsSearching(false);
-        router.push(`/chat/${data.sessionId}`);
-        return;
-      }
-
-      // If waiting for a human match, start search polling interval
-      searchTimerRef.current = setInterval(async () => {
-        setSearchSeconds((s) => s + 1);
-
-        const statusRes = await fetch("/api/match/status");
-        const statusData = await statusRes.json();
-
-        if (statusData.matched && statusData.sessionId) {
-          clearInterval(searchTimerRef.current);
-          setIsSearching(false);
-          router.push(`/chat/${statusData.sessionId}`);
-        }
-      }, 2000);
-    } catch (e) {
-      console.error("Match error:", e);
-      setIsSearching(false);
-    }
-  }
-
-  // Cancel Matchmaking
-  async function cancelMatchmaking() {
-    if (searchTimerRef.current) clearInterval(searchTimerRef.current);
-    setIsSearching(false);
-    await fetch("/api/match/cancel", { method: "POST" });
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070709] flex items-center justify-center text-zinc-400">
+      <div className="min-h-screen bg-[#872bf5] flex items-center justify-center text-white">
         <div className="flex items-center gap-3">
-          <div className="w-4 h-4 rounded-full bg-amber-400 animate-ping"></div>
-          <span className="text-sm font-medium">Entering One Hour Friend...</span>
+          <div className="w-5 h-5 rounded-full bg-white animate-ping" />
+          <span className="text-sm font-black">Opening One Hour Friend...</span>
         </div>
       </div>
     );
   }
 
-  const currentZone = INTENT_ZONES.find((z) => z.id === selectedIntent) || INTENT_ZONES[0];
-  const currentGroup = SOCIAL_GROUPS.find((g) => g.id === selectedSocialGroup) || SOCIAL_GROUPS[0];
-
   return (
-    <main className="min-h-screen bg-[#070709] text-white flex flex-col">
-      {/* Top Bar */}
-      <header className="border-b border-white/5 bg-zinc-950/80 backdrop-blur-md px-6 py-4 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-amber-400 text-black font-bold flex items-center justify-center text-base shadow-md shadow-amber-500/20">
-              1H
-            </div>
-            <span className="font-bold text-sm tracking-wide hidden sm:inline">
-              ONE HOUR FRIEND
-            </span>
+    <div className="h-screen flex flex-col md:flex-row bg-[#121218] text-white overflow-hidden selection:bg-[#872bf5] selection:text-white relative">
+      {/* 1. Left Slim Navigation Rail (Desktop) */}
+      <aside className="hidden md:flex flex-col items-center justify-between w-18 bg-[#181824] border-r border-white/10 py-6 z-20 shrink-0">
+        <div className="flex flex-col items-center gap-6">
+          <Link
+            href="/"
+            className="w-11 h-11 rounded-2xl bg-[#872bf5] text-white font-black flex items-center justify-center text-base shadow-lg shadow-[#872bf5]/40 hover:scale-105 transition"
+          >
+            1H
           </Link>
 
-          {/* Role Switcher Pill */}
-          <div className="flex items-center bg-black/60 p-1 rounded-full border border-white/10">
+          <nav className="flex flex-col items-center gap-3">
             <button
-              onClick={() => setActiveRole("PROBLEM_FACER")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
-                activeRole === "PROBLEM_FACER"
-                  ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
-                  : "text-zinc-400 hover:text-white"
+              onClick={() => setActiveTab("chat_home")}
+              title="Chats & Matchmaking"
+              className={`p-3 rounded-2xl transition ${
+                activeTab === "chat_home"
+                  ? "bg-[#872bf5] text-white shadow-lg shadow-[#872bf5]/30"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
               }`}
             >
-              👤 Seeker
+              <Home className="w-5 h-5" />
             </button>
+
             <button
-              onClick={() => setActiveRole("GUIDER")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
-                activeRole === "GUIDER"
-                  ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              onClick={() => {
+                setActiveTab("chat_home");
+                setShowCategoryModal(true);
+              }}
+              title="Instant Matchmaker"
+              className="p-3 rounded-2xl text-purple-300 hover:text-white hover:bg-[#872bf5]/20 transition relative"
             >
-              🧭 Guider
+              <Radio className="w-5 h-5 animate-pulse" />
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-2 ring-[#181824]" />
             </button>
+
             <button
-              onClick={() => setActiveRole("CASUAL_CHILL")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
-                activeRole === "CASUAL_CHILL"
-                  ? "bg-amber-400 text-black shadow-md shadow-amber-400/20"
-                  : "text-zinc-400 hover:text-white"
+              onClick={() => setActiveTab("circles")}
+              title="Social Circles"
+              className={`p-3 rounded-2xl transition ${
+                activeTab === "circles"
+                  ? "bg-[#872bf5] text-white shadow-lg shadow-[#872bf5]/30"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
               }`}
             >
-              ☕ Casual
+              <Users className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setActiveTab("friends")}
+              title="Kept Friends & DMs"
+              className={`p-3 rounded-2xl transition ${
+                activeTab === "friends"
+                  ? "bg-[#872bf5] text-white shadow-lg shadow-[#872bf5]/30"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+              }`}
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setActiveTab("vent")}
+              title="Anonymous Vent Wall"
+              className={`p-3 rounded-2xl transition ${
+                activeTab === "vent"
+                  ? "bg-[#872bf5] text-white shadow-lg shadow-[#872bf5]/30"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+              }`}
+            >
+              <Heart className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setActiveTab("daily_q")}
+              title="Daily Question"
+              className={`p-3 rounded-2xl transition ${
+                activeTab === "daily_q"
+                  ? "bg-[#872bf5] text-white shadow-lg shadow-[#872bf5]/30"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
+              }`}
+            >
+              <Sparkles className="w-5 h-5" />
+            </button>
+          </nav>
+        </div>
+
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative">
+            <span className="text-2xl">{currentUser?.avatar || "🌙"}</span>
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-2 ring-[#181824]" />
+          </div>
+
+          <button
+            onClick={handleLogout}
+            title="Sign Out"
+            className="p-2.5 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. Middle-Left Sidebar Panel (Active Stories + Crisp White Messages Card) */}
+      <aside className="w-full md:w-88 bg-[#121218] border-r border-white/10 flex flex-col shrink-0 h-auto md:h-full z-10">
+        {/* Header with Title & Search */}
+        <div className="p-5 pb-3">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-black text-white tracking-tight">Messages</h2>
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="p-2 rounded-xl bg-[#872bf5] text-white font-bold text-xs hover:bg-[#7417e3] transition shadow-md shadow-[#872bf5]/30 flex items-center gap-1.5 hover:scale-105 active:scale-95"
+            >
+              <Zap className="w-3.5 h-3.5 fill-white" />
+              <span>Match</span>
             </button>
           </div>
 
-          {/* User Profile summary & Logout */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2.5 text-right">
-              <span className="text-2xl">{user?.avatar || "🌙"}</span>
-              <div className="hidden md:block">
-                <div className="text-xs font-bold text-white leading-tight">{user?.username}</div>
-                <div className="text-[10px] text-amber-400 font-medium">
-                  ⭐ {user?.trustScore?.toFixed(1) || "5.0"} • 🪙 {user?.karmaPoints || 100} pts
-                </div>
+          {/* Search Pill */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#1e1e26] border border-white/5 rounded-2xl pl-9 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#872bf5]"
+            />
+            <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
+          </div>
+        </div>
+
+        {/* HORIZONTAL ACTIVE STORIES STRIP */}
+        <div className="px-5 pb-4">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[11px] font-bold text-zinc-400 flex items-center gap-1.5">
+              <span>Currently Active</span>
+              <span className="w-2 h-2 rounded-full bg-[#00e676] shadow-sm shadow-[#00e676]/60 animate-pulse" />
+            </span>
+            <span className="text-[10px] text-purple-300 font-bold">Tap to Talk</span>
+          </div>
+
+          <div className="flex items-center gap-3.5 overflow-x-auto pb-1">
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="flex flex-col items-center gap-1 shrink-0 group"
+            >
+              <div className="w-12 h-12 rounded-full bg-[#872bf5] flex items-center justify-center text-white shadow-md shadow-[#872bf5]/30 group-hover:scale-105 transition">
+                <Plus className="w-5 h-5" />
               </div>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              title="Sign Out"
-              className="p-2 rounded-xl bg-white/[0.03] hover:bg-red-500/10 hover:text-red-400 border border-white/5 transition text-zinc-400"
-            >
-              <LogOut className="w-4 h-4" />
+              <span className="text-[10px] text-zinc-400 group-hover:text-white font-medium">Add Story</span>
             </button>
-          </div>
-        </div>
-      </header>
 
-      {/* Active Session Alert Banner (if user has a live chat open) */}
-      {activeSession && (
-        <div className="bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-b border-amber-500/30 px-6 py-3">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3 text-xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-semibold text-white">
-                You have an ongoing 60-Minute Conversation:
-              </span>
-              <span className="text-amber-300 font-medium hidden sm:inline">
-                {activeSession.topic || "Active Chat"} ({activeSession.intent} Zone)
-              </span>
-            </div>
-
-            <Link
-              href={`/chat/${activeSession.id}`}
-              className="bg-amber-400 text-black font-bold px-4 py-1.5 rounded-full text-xs hover:bg-amber-300 transition shadow-md shadow-amber-400/20 flex items-center gap-1.5"
-            >
-              <span>Resume Chat</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto w-full px-6 py-8 flex-1">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 mb-8 border-b border-white/5 pb-4 overflow-x-auto">
-          {[
-            { id: "match", label: "⚡ Find a 60-Min Friend", icon: Flame },
-            { id: "community", label: "📢 Community & Vent Wall", icon: Sparkles },
-            { id: "friends", label: `❤️ Kept Friends (${friends.length})`, icon: Heart },
-            { id: "profile", label: "👤 Persona & Settings", icon: User },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            return (
+            {ONLINE_ACTIVE_PEOPLE.map((p, idx) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
-                  activeTab === tab.id
-                    ? "bg-white/10 text-white border border-white/10"
-                    : "text-zinc-400 hover:text-white"
+                key={idx}
+                onClick={() => handleStartMatchmaking(false, p.intent, p.mood)}
+                className="flex flex-col items-center gap-1 shrink-0 group"
+              >
+                <div className="relative w-12 h-12 rounded-full bg-[#1c1c24] border-2 border-[#872bf5] flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
+                  {p.avatar}
+                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#00e676] ring-2 ring-[#121218]" />
+                </div>
+                <span className="text-[10px] font-bold text-zinc-300 group-hover:text-purple-300">{p.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* CRISP WHITE MESSAGE CONTAINER (From Screenshot) */}
+        <div className="flex-1 bg-white rounded-t-[32px] text-black p-4 md:p-5 overflow-y-auto space-y-2 shadow-2xl">
+          <div className="flex items-center justify-between px-1 mb-2">
+            <span className="text-xs font-black text-black tracking-tight">Direct Connections</span>
+            <span className="text-[10px] text-zinc-500 font-bold">{friends.length} Kept</span>
+          </div>
+
+          {friends.length === 0 ? (
+            <div className="space-y-3 pt-2">
+              <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-center">
+                <p className="text-xs text-zinc-600 font-medium leading-relaxed">
+                  Start your first 60-minute chat! Both click "Keep Friendship" to message here permanently.
+                </p>
+              </div>
+
+              {INTENT_ZONES.map((zone) => (
+                <button
+                  key={zone.id}
+                  onClick={() => {
+                    setSelectedIntent(zone.id);
+                    setShowCategoryModal(true);
+                  }}
+                  className="w-full p-3 rounded-2xl bg-zinc-50 hover:bg-purple-50 border border-zinc-100 hover:border-purple-200 transition flex items-center justify-between text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{zone.emoji}</span>
+                    <div>
+                      <div className="text-xs font-black text-black group-hover:text-[#872bf5] transition">
+                        {zone.name}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 font-medium">{zone.badge}</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#872bf5] bg-purple-100 px-2 py-0.5 rounded-full">
+                    Start
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            friends.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => {
+                  setActiveFriendship(f);
+                  setActiveTab("friends");
+                  loadFriendChat(f.id);
+                }}
+                className={`w-full p-3 rounded-2xl transition flex items-center justify-between text-left border ${
+                  activeFriendship?.id === f.id
+                    ? "bg-purple-50 border-purple-200 text-black shadow-sm"
+                    : "bg-white hover:bg-zinc-50 border-transparent text-black"
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 text-amber-400" />
-                <span>{tab.label}</span>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <span className="text-2xl">{f.partner?.avatar || "✨"}</span>
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-1 ring-white" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-black">{f.partner?.username}</div>
+                    <div className="text-[11px] text-zinc-500 line-clamp-1 font-medium">
+                      {f.lastMessage?.content || "Connected Friend"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-zinc-400 font-semibold block">12:25 PM</span>
+                  <CheckCheck className="w-3.5 h-3.5 text-[#872bf5] ml-auto mt-0.5" />
+                </div>
               </button>
-            );
-          })}
+            ))
+          )}
         </div>
+      </aside>
 
-        {/* TAB 1: MATCHMAKER CENTRAL */}
-        {activeTab === "match" && (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left 2 Columns: Matchmaker Config */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Role Context Hero Card */}
-              <div className="p-6 rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/80 to-zinc-950 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">
-                      {activeRole === "PROBLEM_FACER" ? "👤" : activeRole === "GUIDER" ? "🧭" : "☕"}
-                    </span>
-                    <div>
-                      <h2 className="text-lg font-bold text-white">
-                        {activeRole === "PROBLEM_FACER"
-                          ? "Problem Facer Mode (Seek Guidance)"
-                          : activeRole === "GUIDER"
-                          ? "Guider Mode (Help & Listen)"
-                          : "Casual Chill Mode (Wholesome Banter)"}
-                      </h2>
-                      <div className="text-xs text-zinc-400">
-                        {activeRole === "PROBLEM_FACER"
-                          ? "Tell us what you're dealing with to pair with an active, empathetic listener."
-                          : activeRole === "GUIDER"
-                          ? "Help someone navigate their stress or career roadmap for 60 minutes."
-                          : "Connect with someone to chat about hobbies, life, and good vibes."}
-                      </div>
-                    </div>
-                  </div>
+      {/* 3. Center Main Viewport */}
+      <main className="flex-1 flex flex-col bg-[#121218] overflow-y-auto relative">
+        {/* Animated Background Rings behind main viewport */}
+        <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] rounded-full border border-white/5 animate-concentric-1 pointer-events-none -z-0" />
+        <div className="absolute top-1/4 right-1/4 w-[800px] h-[800px] rounded-full border border-white/5 animate-concentric-2 pointer-events-none -z-0" />
+
+        {/* TAB 1: Chat Home & Instant Excitement Hero */}
+        {activeTab === "chat_home" && (
+          <div className="p-6 md:p-10 max-w-5xl mx-auto w-full space-y-8 relative z-10">
+            {/* VIBRANT PURPLE HERO BANNER (With Shimmer & Concentric Animation) */}
+            <div className="relative rounded-[32px] p-8 md:p-10 bg-[#872bf5] bg-[radial-gradient(circle_at_center,#9a46fc_0%,#872bf5_50%,#7016db_100%)] shadow-2xl shadow-[#872bf5]/40 overflow-hidden text-white group">
+              {/* Shimmer sweep effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent animate-shimmer pointer-events-none" />
+
+              <div className="relative z-10 max-w-xl space-y-3.5">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/20 backdrop-blur-md border border-white/20 text-[11px] font-black text-white shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                  <span>1-on-1 Real-Time Anonymous Space</span>
                 </div>
 
-                {/* Step 1: Protected Intent Zone Selector */}
-                <div className="mt-6">
-                  <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                    1. Choose Protected Intent Zone
-                  </label>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    {INTENT_ZONES.map((zone) => (
-                      <button
-                        key={zone.id}
-                        type="button"
-                        onClick={() => setSelectedIntent(zone.id)}
-                        className={`p-3.5 rounded-2xl border text-left transition ${
-                          selectedIntent === zone.id
-                            ? "bg-white/10 border-amber-400 text-white shadow-lg shadow-amber-400/5"
-                            : "bg-black/30 border-white/5 text-zinc-400 hover:border-white/20"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xl">{zone.emoji}</span>
-                          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-white/5 ${zone.color}`}>
-                            {zone.badge}
-                          </span>
-                        </div>
-                        <div className="text-xs font-bold text-white mt-2">{zone.name}</div>
-                        <div className="text-[11px] text-zinc-400 mt-0.5">{zone.tagline}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight drop-shadow-sm">
+                  Connect with a stranger in 60 seconds.
+                </h1>
 
-                {/* Step 2: Social Group / Circle */}
-                <div className="mt-6">
-                  <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                    2. Select Social Circle
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {SOCIAL_GROUPS.map((group) => (
-                      <button
-                        key={group.id}
-                        type="button"
-                        onClick={() => setSelectedSocialGroup(group.id)}
-                        className={`p-3 rounded-xl border text-left transition ${
-                          selectedSocialGroup === group.id
-                            ? "bg-white/10 border-teal-400 text-white"
-                            : "bg-black/30 border-white/5 text-zinc-400 hover:border-white/15"
-                        }`}
-                      >
-                        <div className="text-lg">{group.emoji}</div>
-                        <div className="text-xs font-bold text-white mt-1">{group.name}</div>
-                        <div className="text-[10px] text-zinc-400 truncate">{group.tagline}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Step 3: Mood & Situation Picker */}
-                <div className="mt-6">
-                  <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                    3. What is your current mood or topic?
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-                    {MOODS.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setSelectedMood(m.label)}
-                        className={`p-2.5 rounded-xl border text-left transition ${
-                          selectedMood === m.label
-                            ? "bg-amber-400/10 border-amber-400 text-amber-300"
-                            : "bg-black/20 border-white/5 text-zinc-400 hover:border-white/15"
-                        }`}
-                      >
-                        <div className="text-base">{m.emoji}</div>
-                        <div className="text-xs font-semibold text-zinc-200 mt-1 truncate">{m.label}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Step 4: Short summary / problem context (optional) */}
-                <div className="mt-6">
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                    4. Brief thought or context for your partner (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Struggling with career direction, or just need to vent about today..."
-                    value={problemSummary}
-                    onChange={(e) => setProblemSummary(e.target.value)}
-                    className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-amber-400 transition"
-                  />
-                </div>
-
-                {/* Big Match Button */}
-                <button
-                  onClick={() => startMatchmaking(false)}
-                  className="w-full mt-8 bg-amber-400 text-black font-extrabold py-4 rounded-2xl text-sm hover:bg-amber-300 transition shadow-xl shadow-amber-400/25 flex items-center justify-center gap-2 group"
-                >
-                  <Flame className="w-5 h-5 group-hover:scale-125 transition" />
-                  <span>Start 60-Minute Matchmaking</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Right Column: Platform Status & Quick Fallback */}
-            <div className="space-y-6">
-              {/* Instant AI Companion Box */}
-              <div className="p-6 rounded-3xl bg-gradient-to-br from-purple-950/40 via-zinc-900 to-zinc-900 border border-purple-500/20 relative overflow-hidden">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center text-base mb-3">
-                  ✨
-                </div>
-                <h3 className="text-base font-bold text-white">
-                  Need to Talk Right Now?
-                </h3>
-                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                  Connect instantly with our <strong className="text-purple-300">AI Compassionate Companion</strong>. Zero waiting time, deep empathy, and 60 minutes of uninterrupted calm.
+                <p className="text-xs md:text-sm text-purple-100 leading-relaxed font-medium">
+                  Vent stress, get career guidance, or have late-night deep conversations with zero judgment and 100% privacy.
                 </p>
 
-                <button
-                  onClick={() => startMatchmaking(true)}
-                  className="mt-5 w-full border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-bold py-3 rounded-xl text-xs transition flex items-center justify-center gap-2"
-                >
-                  <span>Talk with AI Companion Instantly</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Safety Rules reminder */}
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-zinc-400 space-y-2.5">
-                <div className="flex items-center gap-2 text-zinc-200 font-bold">
-                  <ShieldCheck className="w-4 h-4 text-teal-400" />
-                  <span>Our Safety Commitments</span>
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  • Zero tolerance for harassment or unwanted romantic advances in Peace & Guidance zones.
-                </p>
-                <p className="text-[11px] leading-relaxed">
-                  • 1-Click emergency exit & instant block available at all times during the chat.
-                </p>
-                <p className="text-[11px] leading-relaxed">
-                  • 100% anonymous identity protected.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: COMMUNITY VENT WALL & DAILY QUESTION */}
-        {activeTab === "community" && (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Daily Question */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="p-6 rounded-3xl bg-zinc-900/60 border border-white/10">
-                <div className="text-[10px] uppercase font-bold text-amber-400 tracking-wider mb-2">
-                  Question of the Day 🎴
-                </div>
-                <h3 className="text-lg font-bold text-white">
-                  "{dailyQuestion?.question || "What is a lesson your early 20s taught you?"}"
-                </h3>
-
-                {/* Answer form */}
-                <form onSubmit={submitDailyAnswer} className="mt-5 space-y-3">
-                  <textarea
-                    rows={3}
-                    placeholder="Share your reflection anonymously..."
-                    value={dailyAnswer}
-                    onChange={(e) => setDailyAnswer(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-amber-400"
-                  />
+                <div className="pt-3 flex flex-wrap items-center gap-3">
                   <button
-                    type="submit"
-                    className="w-full bg-amber-400 text-black font-bold py-2.5 rounded-xl text-xs hover:bg-amber-300 transition"
+                    onClick={() => setShowCategoryModal(true)}
+                    className="bg-white text-[#872bf5] font-black text-xs md:text-sm px-7 py-3.5 rounded-2xl transition shadow-xl hover:bg-zinc-100 flex items-center gap-2 group hover:scale-105 active:scale-95"
                   >
-                    Post Answer
+                    <Zap className="w-4 h-4 fill-[#872bf5]" />
+                    <span>⚡ Match with Someone Online</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
                   </button>
-                </form>
 
-                {/* Answers List */}
-                <div className="mt-6 space-y-3 max-h-96 overflow-y-auto pr-1">
-                  <div className="text-[11px] font-semibold text-zinc-400">
-                    Community Answers ({dailyQuestion?.answers?.length || 0})
-                  </div>
-                  {dailyQuestion?.answers?.map((ans: any) => (
-                    <div key={ans.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs">
-                      <div className="flex items-center justify-between text-zinc-400 mb-1">
-                        <span className="font-semibold text-zinc-300">{ans.avatar} {ans.anonymousName}</span>
-                      </div>
-                      <p className="text-zinc-200 leading-relaxed">{ans.answer}</p>
-                    </div>
-                  ))}
+                  <button
+                    onClick={() => handleStartMatchmaking(true)}
+                    className="bg-black/30 hover:bg-black/40 border border-white/25 text-white font-bold text-xs px-5 py-3.5 rounded-2xl transition backdrop-blur-md flex items-center gap-2 hover:scale-105 active:scale-95"
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-200" />
+                    <span>AI Companion (Zero Waiting)</span>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Vent Wall */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Post a Vent */}
-              <div className="p-6 rounded-3xl bg-zinc-900/60 border border-white/10">
-                <h3 className="text-base font-bold text-white mb-2">
-                  Anonymous Vent & Support Wall 📢
-                </h3>
-                <p className="text-xs text-zinc-400 mb-4">
-                  Need to share a thought, celebrate a small win, or release stress? Post here and receive hugs from friends.
-                </p>
-
-                <form onSubmit={submitVentPost} className="space-y-3">
-                  <textarea
-                    rows={3}
-                    placeholder="What's weighing on your heart right now? (Anonymous)"
-                    value={newVentContent}
-                    onChange={(e) => setNewVentContent(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-amber-400"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      className="bg-amber-400 text-black font-bold px-5 py-2 rounded-xl text-xs hover:bg-amber-300 transition flex items-center gap-1.5"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Post Anonymously</span>
-                    </button>
-                  </div>
-                </form>
+            {/* ACTION PROMPT BUTTONS */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-black text-white">What's on your mind right now?</h2>
+                  <p className="text-xs text-zinc-400">Choose a trigger to match instantly</p>
+                </div>
+                <span className="text-xs text-purple-300 font-bold">1-Click Launch</span>
               </div>
 
-              {/* Vent Posts Stream */}
-              <div className="space-y-4">
-                {ventPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="p-5 rounded-2xl bg-zinc-900/40 border border-white/5 hover:border-white/10 transition"
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  {
+                    title: "🌪️ Stressed / Need to Vent",
+                    desc: "Find a gentle, empathetic listener right now",
+                    intent: "PEACE",
+                    mood: "Stressed & Overwhelmed",
+                    btnText: "Vent Safely →",
+                  },
+                  {
+                    title: "🧗 Stuck in Career / Tech",
+                    desc: "Talk with a guider for roadmaps and advice",
+                    intent: "GUIDANCE",
+                    mood: "Coding / Tech Roadmaps",
+                    btnText: "Get Mentored →",
+                  },
+                  {
+                    title: "🌙 Late Night Deep Talks",
+                    desc: "Philosophy, dreams, and midnight conversations",
+                    intent: "PEACE",
+                    mood: "Late Night Thoughts",
+                    btnText: "Join Night Owls →",
+                  },
+                  {
+                    title: "😴 Super Bored / Chill Banter",
+                    desc: "Wholesome friendly chat about gaming, movies, life",
+                    intent: "CASUAL",
+                    mood: "Super Bored / Want to Talk",
+                    btnText: "Banter Now →",
+                  },
+                  {
+                    title: "💔 Heartbreak / Relationship",
+                    desc: "Process emotions with someone who understands",
+                    intent: "PEACE",
+                    mood: "Heartbroken / Breakup",
+                    btnText: "Find Healing →",
+                  },
+                  {
+                    title: "✨ Spark & Playful Vibes",
+                    desc: "Romantic chemistry in an isolated consensual zone",
+                    intent: "SPARK",
+                    mood: "Looking for a Spark",
+                    btnText: "Explore Spark →",
+                  },
+                ].map((action, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleStartMatchmaking(false, action.intent, action.mood)}
+                    className="p-5 rounded-3xl bg-[#181824] hover:bg-[#202030] border border-white/5 hover:border-[#872bf5]/70 text-left transition group flex flex-col justify-between shadow-md hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <div className="flex items-center justify-between text-xs mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{post.avatar}</span>
-                        <span className="font-bold text-zinc-200">{post.anonymousName}</span>
-                        <span className="text-[10px] text-zinc-500">• {post.category}</span>
+                    <div>
+                      <div className="text-sm font-black text-white group-hover:text-purple-300 transition">
+                        {action.title}
                       </div>
-                      <span className="text-[10px] text-amber-400 font-medium px-2 py-0.5 rounded-full bg-amber-400/10">
-                        {post.mood}
-                      </span>
+                      <p className="text-xs text-zinc-400 mt-2 leading-relaxed font-medium">
+                        {action.desc}
+                      </p>
                     </div>
 
-                    <p className="text-xs text-zinc-300 leading-relaxed font-normal">
-                      {post.content}
-                    </p>
-
-                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
-                      <button
-                        onClick={() => sendHug(post.id)}
-                        className="flex items-center gap-1.5 text-pink-400 hover:text-pink-300 transition text-xs font-semibold"
-                      >
-                        <Heart className="w-3.5 h-3.5 fill-pink-500/20" />
-                        <span>Send Virtual Hug ({post.hugsCount})</span>
-                      </button>
-                      <span className="text-[10px] text-zinc-500">
-                        {new Date(post.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
+                    <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-bold text-purple-400 group-hover:text-purple-300">
+                      <span>{action.btnText}</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition" />
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
+
+            {/* Community Highlights */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 rounded-3xl bg-[#181824] border border-white/5 space-y-3 shadow-md hover:scale-[1.01] transition">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs font-bold text-white">Daily Reflection</span>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("daily_q")}
+                    className="text-xs text-purple-300 font-bold hover:underline"
+                  >
+                    Answer →
+                  </button>
+                </div>
+                <div className="text-sm font-bold text-zinc-100">
+                  "{dailyQuestion?.question || "What is something you are silently proud of achieving?"}"
+                </div>
+                <div className="text-xs text-zinc-400">
+                  {dailyAnswers.length} friends answered today.
+                </div>
+              </div>
+
+              <div className="p-6 rounded-3xl bg-[#181824] border border-white/5 space-y-3 shadow-md hover:scale-[1.01] transition">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-pink-400" />
+                    <span className="text-xs font-bold text-white">Anonymous Vent Wall</span>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("vent")}
+                    className="text-xs text-pink-400 font-bold hover:underline"
+                  >
+                    Share Thoughts →
+                  </button>
+                </div>
+                <div className="text-xs text-zinc-300 line-clamp-2 italic">
+                  "{ventPosts[0]?.content || "Sending warmth to anyone having a difficult day right now..."}"
+                </div>
+                <div className="text-xs text-zinc-400">
+                  {ventPosts.length} posts with virtual hugs active.
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* TAB 3: KEPT CONNECTIONS / FRIENDS */}
-        {activeTab === "friends" && (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Friends list */}
-            <div className="lg:col-span-1 space-y-4">
-              <h3 className="text-base font-bold text-white">
-                Your Kept Friends ({friends.length})
-              </h3>
-              <p className="text-xs text-zinc-400">
-                People you mutually chose to stay connected with after your 60-minute conversations.
+        {/* TAB 2: Social Circles */}
+        {activeTab === "circles" && (
+          <div className="p-6 md:p-10 max-w-5xl mx-auto w-full space-y-6 relative z-10">
+            <div>
+              <h1 className="text-2xl font-black text-white">Social Circles & Safe Spaces</h1>
+              <p className="text-xs text-zinc-400 mt-1 font-medium">
+                Select your preferred identity or life stage circle for your next 60-minute match.
               </p>
-
-              {friends.length === 0 ? (
-                <div className="p-8 text-center rounded-2xl bg-zinc-900/40 border border-white/5 text-xs text-zinc-500">
-                  <Heart className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-                  No kept connections yet. Complete a 60-minute chat and both click "Keep Connection"!
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {friends.map((f) => (
-                    <button
-                      key={f.friendshipId}
-                      onClick={() => openFriendChat(f)}
-                      className={`w-full p-3.5 rounded-2xl border text-left transition flex items-center justify-between ${
-                        selectedFriend?.friendshipId === f.friendshipId
-                          ? "bg-amber-400/10 border-amber-400"
-                          : "bg-zinc-900/50 border-white/5 hover:border-white/15"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{f.friend.avatar}</span>
-                        <div>
-                          <div className="text-xs font-bold text-white">{f.friend.username}</div>
-                          <div className="text-[10px] text-zinc-400 line-clamp-1">
-                            {f.lastMessage?.content || "Permanent Friend"}
-                          </div>
-                        </div>
-                      </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-zinc-500" />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Direct Chat Drawer */}
-            <div className="lg:col-span-2">
-              {selectedFriend ? (
-                <div className="p-6 rounded-3xl bg-zinc-900/70 border border-white/10 flex flex-col h-[520px]">
-                  {/* Chat header */}
-                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{selectedFriend.friend.avatar}</span>
-                      <div>
-                        <div className="text-xs font-bold text-white">{selectedFriend.friend.username}</div>
-                        <div className="text-[10px] text-emerald-400">Direct Message Channel</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {SOCIAL_GROUPS.map((group) => (
+                <div
+                  key={group.id}
+                  className="p-6 rounded-3xl bg-[#181824] border border-white/5 flex flex-col justify-between hover:scale-[1.02] transition shadow-lg"
+                >
+                  <div>
+                    <span className="text-3xl mb-3 block">{group.emoji}</span>
+                    <h3 className="text-base font-extrabold text-white">{group.name}</h3>
+                    <div className="text-xs text-purple-300 font-semibold mt-1">{group.tagline}</div>
+                    <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed font-medium">{group.description}</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedSocialGroup(group.id);
+                      setShowCategoryModal(true);
+                    }}
+                    className="mt-5 w-full bg-[#872bf5] hover:bg-[#7417e3] text-white font-bold text-xs py-3 rounded-2xl transition shadow-md shadow-[#872bf5]/20 hover:scale-105 active:scale-95"
+                  >
+                    Match in {group.name}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: Kept Friends Direct Messaging */}
+        {activeTab === "friends" && (
+          <div className="flex-1 flex flex-col h-full relative z-10">
+            {activeFriendship ? (
+              <div className="flex-1 flex flex-col h-full">
+                <div className="p-4 border-b border-white/10 bg-[#181824] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{activeFriendship.partner?.avatar || "✨"}</span>
+                    <div>
+                      <div className="text-xs font-bold text-white">{activeFriendship.partner?.username}</div>
+                      <div className="text-[10px] text-[#00e676] flex items-center gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#00e676]" />
+                        <span>Connected Friend (Kept after 60-min chat)</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Messages Feed */}
-                  <div className="flex-1 overflow-y-auto py-4 space-y-3 pr-2">
-                    {friendMessages.length === 0 && (
-                      <div className="text-center text-xs text-zinc-500 py-10">
-                        Say hello to your new friend! 👋
-                      </div>
-                    )}
-                    {friendMessages.map((msg) => {
-                      const isMe = msg.senderId === user.id;
+                  <div className="flex items-center gap-2">
+                    <button className="p-2.5 rounded-xl bg-white/5 text-zinc-400 hover:text-white">
+                      <Phone className="w-4 h-4" />
+                    </button>
+                    <button className="p-2.5 rounded-xl bg-white/5 text-zinc-400 hover:text-white">
+                      <Video className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
+                  {friendMessages.length === 0 ? (
+                    <div className="text-center py-12 text-xs text-zinc-500">
+                      Say hi to your permanent friend! You both chose to stay connected.
+                    </div>
+                  ) : (
+                    friendMessages.map((m) => {
+                      const isMe = m.senderId === currentUser?.id;
                       return (
                         <div
-                          key={msg.id}
-                          className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                          key={m.id}
+                          className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
                         >
+                          {!isMe && <span className="text-lg">{activeFriendship.partner?.avatar || "✨"}</span>}
                           <div
-                            className={`max-w-md p-3 rounded-2xl text-xs leading-relaxed ${
+                            className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
                               isMe
-                                ? "bg-amber-400 text-black font-medium"
-                                : "bg-zinc-800 text-zinc-200 border border-white/5"
+                                ? "bg-[#872bf5] text-white rounded-br-none font-medium shadow-md shadow-[#872bf5]/20"
+                                : "bg-[#20202c] text-white rounded-bl-none border border-white/5"
                             }`}
                           >
-                            {msg.content}
+                            <div>{m.content}</div>
+                            <div className="text-[9px] text-purple-200 mt-1 text-right">
+                              {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </div>
                           </div>
                         </div>
                       );
-                    })}
+                    })
+                  )}
+                </div>
+
+                <form onSubmit={handleSendFriendMessage} className="p-4 border-t border-white/10 bg-[#181824] flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Type a message to your friend..."
+                    value={newFriendMessage}
+                    onChange={(e) => setNewFriendMessage(e.target.value)}
+                    className="flex-1 bg-[#121218] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#872bf5]"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-[#872bf5] text-white font-extrabold px-6 py-3 rounded-2xl text-xs hover:bg-[#7417e3] transition flex items-center gap-1.5 shadow-lg shadow-[#872bf5]/30 hover:scale-105 active:scale-95"
+                  >
+                    <span>Send</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-zinc-400">
+                <MessageSquare className="w-12 h-12 text-[#872bf5] mb-3" />
+                <h3 className="text-base font-bold text-white">No Friends Selected</h3>
+                <p className="text-xs text-zinc-500 max-w-sm mt-1 font-medium">
+                  After a 60-minute chat session, if you both click "Keep Friendship", you can chat here permanently!
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: Vent Wall */}
+        {activeTab === "vent" && (
+          <div className="p-6 md:p-10 max-w-4xl mx-auto w-full space-y-6 relative z-10">
+            <div>
+              <h1 className="text-2xl font-black text-white">Anonymous Vent Wall</h1>
+              <p className="text-xs text-zinc-400 mt-1 font-medium">
+                Post anything on your mind. Send and receive virtual hugs from the community with zero judgment.
+              </p>
+            </div>
+
+            <form onSubmit={handlePostVent} className="p-5 rounded-3xl bg-[#181824] border border-white/5 space-y-3">
+              <textarea
+                rows={3}
+                placeholder="What is weighing on your mind today? (100% anonymous)"
+                value={newVentContent}
+                onChange={(e) => setNewVentContent(e.target.value)}
+                className="w-full bg-[#121218] border border-white/10 rounded-2xl p-4 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#872bf5]"
+              />
+
+              <div className="flex items-center justify-between">
+                <select
+                  value={newVentCategory}
+                  onChange={(e) => setNewVentCategory(e.target.value)}
+                  className="bg-[#121218] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                >
+                  <option value="Peace & Healing">🕊️ Peace & Healing</option>
+                  <option value="Career & Studies">💼 Career & Studies</option>
+                  <option value="Late Night Thoughts">🌙 Late Night Thoughts</option>
+                  <option value="Relationships">💔 Relationships</option>
+                </select>
+
+                <button
+                  type="submit"
+                  className="bg-[#872bf5] hover:bg-[#7417e3] text-white font-extrabold px-6 py-2.5 rounded-xl text-xs transition shadow-md shadow-[#872bf5]/20 hover:scale-105 active:scale-95"
+                >
+                  Post Anonymously
+                </button>
+              </div>
+            </form>
+
+            <div className="space-y-3.5">
+              {ventPosts.map((post) => (
+                <div key={post.id} className="p-5 rounded-3xl bg-[#181824] border border-white/5 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{post.avatar || "🌙"}</span>
+                      <span className="text-xs font-bold text-white">{post.anonymousName}</span>
+                      <span className="text-[10px] text-zinc-500">• {new Date(post.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                    <p className="text-xs text-zinc-200 leading-relaxed font-medium">{post.content}</p>
                   </div>
 
-                  {/* Message Input */}
-                  <form onSubmit={sendFriendMessage} className="pt-3 border-t border-white/10 flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Type a message..."
-                      value={newFriendMsg}
-                      onChange={(e) => setNewFriendMsg(e.target.value)}
-                      className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-amber-400"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-amber-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-amber-300 transition"
-                    >
-                      Send
-                    </button>
-                  </form>
+                  <button
+                    onClick={() => handleHugVent(post.id)}
+                    className="p-2.5 rounded-2xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/20 flex items-center gap-1.5 text-xs font-bold transition shrink-0 hover:scale-105 active:scale-95"
+                  >
+                    <Heart className="w-3.5 h-3.5 fill-pink-500" />
+                    <span>{post.hugsCount || 0} Hugs</span>
+                  </button>
                 </div>
-              ) : (
-                <div className="h-[520px] rounded-3xl bg-zinc-900/30 border border-white/5 flex flex-col items-center justify-center text-center p-6 text-zinc-500 text-xs">
-                  <MessageSquare className="w-10 h-10 mb-3 text-zinc-600" />
-                  <span>Select a friend on the left to start direct messaging.</span>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         )}
 
-        {/* TAB 4: PERSONA & SETTINGS */}
-        {activeTab === "profile" && (
-          <div className="max-w-xl mx-auto space-y-6">
-            <div className="p-7 rounded-3xl bg-zinc-900/60 border border-white/10 space-y-5">
-              <h3 className="text-base font-bold text-white">Your Anonymous Persona</h3>
+        {/* TAB 5: Daily Question */}
+        {activeTab === "daily_q" && (
+          <div className="p-6 md:p-10 max-w-4xl mx-auto w-full space-y-6 relative z-10">
+            <div>
+              <h1 className="text-2xl font-black text-white">Daily Reflection Question</h1>
+              <p className="text-xs text-zinc-400 mt-1 font-medium">
+                One new question every day to reflect and read perspectives from friends around the world.
+              </p>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-2">Avatar</label>
-                <div className="flex items-center gap-2 flex-wrap bg-black/40 p-3 rounded-2xl border border-white/5">
-                  {AVATARS.map((a) => (
-                    <button
-                      key={a}
-                      type="button"
-                      onClick={async () => {
-                        setUser((prev: any) => ({ ...prev, avatar: a }));
-                        await fetch("/api/user/profile", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ avatar: a }),
-                        });
-                      }}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg transition ${
-                        user?.avatar === a ? "bg-amber-400 scale-110" : "bg-zinc-800/60 hover:bg-zinc-700"
-                      }`}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
+            <div className="p-6 rounded-3xl bg-[#181824] border border-white/5 space-y-4 shadow-lg">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#872bf5]/20 border border-[#872bf5]/30 text-[10px] font-black text-purple-300">
+                <Sparkles className="w-3 h-3" />
+                <span>Today's Question</span>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Anonymous Handle</label>
-                <input
-                  type="text"
-                  disabled
-                  value={user?.username || ""}
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-zinc-400 cursor-not-allowed"
-                />
-              </div>
+              <h2 className="text-lg md:text-xl font-black text-white">
+                "{dailyQuestion?.question || "What is something you are silently proud of achieving that nobody noticed?"}"
+              </h2>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Persona Bio</label>
+              <form onSubmit={handlePostDailyAnswer} className="space-y-3">
                 <textarea
                   rows={2}
-                  value={user?.bio || ""}
-                  onChange={(e) => setUser((prev: any) => ({ ...prev, bio: e.target.value }))}
-                  onBlur={async () => {
-                    await fetch("/api/user/profile", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ bio: user.bio }),
-                    });
-                  }}
-                  className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400"
+                  placeholder="Write your reflection..."
+                  value={myAnswer}
+                  onChange={(e) => setMyAnswer(e.target.value)}
+                  className="w-full bg-[#121218] border border-white/10 rounded-2xl p-3.5 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#872bf5]"
                 />
-              </div>
+                <button
+                  type="submit"
+                  className="bg-[#872bf5] hover:bg-[#7417e3] text-white font-extrabold px-6 py-2.5 rounded-xl text-xs transition hover:scale-105 active:scale-95 shadow-md shadow-[#872bf5]/30"
+                >
+                  Submit Answer
+                </button>
+              </form>
+            </div>
 
-              <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
-                <div>Trust Score: <strong className="text-white">⭐ {user?.trustScore?.toFixed(1)}</strong></div>
-                <div>Karma Points: <strong className="text-amber-400">🪙 {user?.karmaPoints}</strong></div>
-              </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-white">{dailyAnswers.length} Community Answers</h3>
+              {dailyAnswers.map((ans) => (
+                <div key={ans.id} className="p-4 rounded-2xl bg-[#181824] border border-white/5 flex items-start gap-3">
+                  <span className="text-xl">{ans.avatar || "✨"}</span>
+                  <div>
+                    <div className="text-xs font-bold text-white">{ans.anonymousName}</div>
+                    <p className="text-xs text-zinc-300 mt-1 leading-relaxed font-medium">{ans.answer}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
-      </div>
 
-      {/* RADAR MATCHMAKER MODAL */}
-      {isSearching && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 text-center relative overflow-hidden shadow-2xl">
-            {/* Pulsing Radar Animation */}
-            <div className="relative w-40 h-40 mx-auto my-6 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border border-amber-400/30 animate-radar-1"></div>
-              <div className="absolute inset-0 rounded-full border border-amber-400/30 animate-radar-2"></div>
-              <div className="absolute inset-0 rounded-full border border-amber-400/30 animate-radar-3"></div>
-              <div className="w-20 h-20 rounded-full bg-amber-400/10 border border-amber-400/50 flex items-center justify-center text-3xl z-10 shadow-lg shadow-amber-400/30">
-                {user?.avatar || "🌙"}
+        {/* FLOATING ACTION BUTTON */}
+        <button
+          onClick={() => setShowCategoryModal(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#872bf5] hover:bg-[#7417e3] text-white flex items-center justify-center shadow-2xl shadow-[#872bf5]/60 hover:scale-110 active:scale-95 transition z-40"
+          title="Instant 1-Click Match"
+        >
+          <Plus className="w-7 h-7" />
+        </button>
+      </main>
+
+      {/* CATEGORY & MOOD PICKER MODAL */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-[#181824] border border-white/15 rounded-[32px] p-6 md:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white">Pick Your Conversation Room</h3>
+                <p className="text-xs text-zinc-400 font-medium">1 tap to launch matching radar</p>
+              </div>
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-zinc-300 mb-2">Your Role Today</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "PROBLEM_FACER", label: "👤 Problem Facer", desc: "Need listening/advice" },
+                  { id: "GUIDER", label: "🧭 Guider", desc: "Offer warm guidance" },
+                  { id: "CASUAL_CHILL", label: "☕ Casual Friend", desc: "Banter & chill" },
+                ].map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setActiveRole(r.id)}
+                    className={`p-3 rounded-2xl border text-left transition ${
+                      activeRole === r.id
+                        ? "bg-[#872bf5]/25 border-[#872bf5] text-white shadow-md shadow-[#872bf5]/20"
+                        : "bg-[#121218] border-white/5 text-zinc-400 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="text-xs font-bold">{r.label}</div>
+                    <div className="text-[10px] text-zinc-400 mt-0.5">{r.desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-white">
-              Searching for Your 60-Minute Match...
-            </h3>
-            <div className="text-xs text-amber-400 font-semibold mt-1">
-              {currentZone.emoji} {currentZone.name} • {currentGroup.name}
+            <div>
+              <label className="block text-xs font-bold text-zinc-300 mb-2">Intent Safe Zone</label>
+              <div className="grid grid-cols-2 gap-2.5">
+                {INTENT_ZONES.map((zone) => (
+                  <button
+                    key={zone.id}
+                    type="button"
+                    onClick={() => setSelectedIntent(zone.id)}
+                    className={`p-3.5 rounded-2xl border text-left transition ${
+                      selectedIntent === zone.id
+                        ? "bg-[#872bf5]/30 border-[#872bf5] text-white shadow-md shadow-[#872bf5]/20"
+                        : "bg-[#121218] border-white/5 text-zinc-400 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{zone.emoji}</span>
+                      <span className="text-xs font-extrabold text-white">{zone.name}</span>
+                    </div>
+                    <div className="text-[10px] text-purple-300 mt-1 line-clamp-1">{zone.tagline}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-zinc-400 mt-2">
-              Looking for an available {activeRole === "PROBLEM_FACER" ? "Guider" : "Seeker"} in "{selectedMood}" ({searchSeconds}s)
-            </p>
 
-            {/* Instant AI Fallback Button */}
-            <div className="mt-8 space-y-3">
-              <button
-                onClick={() => {
-                  cancelMatchmaking();
-                  startMatchmaking(true);
-                }}
-                className="w-full bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 font-bold py-3 rounded-xl text-xs transition flex items-center justify-center gap-2"
+            <div>
+              <label className="block text-xs font-bold text-zinc-300 mb-2">Current Topic / Mood</label>
+              <select
+                value={selectedMood}
+                onChange={(e) => setSelectedMood(e.target.value)}
+                className="w-full bg-[#121218] border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#872bf5]"
               >
-                <span>✨ Skip Wait & Talk with AI Companion</span>
+                {MOODS.map((m) => (
+                  <option key={m.id} value={m.label} className="bg-[#121218] text-white">
+                    {m.emoji} {m.label} ({m.hint})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="pt-2 flex gap-3">
+              <button
+                onClick={() => handleStartMatchmaking(false)}
+                className="flex-1 bg-[#872bf5] hover:bg-[#7417e3] text-white font-black py-3.5 rounded-2xl text-xs transition shadow-xl shadow-[#872bf5]/40 flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
+              >
+                <Zap className="w-4 h-4 fill-white" />
+                <span>Start Matchmaking Radar</span>
               </button>
 
               <button
-                onClick={cancelMatchmaking}
-                className="w-full border border-white/10 hover:bg-white/5 text-zinc-400 font-semibold py-2.5 rounded-xl text-xs transition"
+                onClick={() => handleStartMatchmaking(true)}
+                className="px-4 bg-[#121218] hover:bg-[#1f202c] border border-white/10 text-purple-300 font-bold text-xs rounded-2xl transition hover:scale-105 active:scale-95"
+                title="Instant AI Companion"
               >
-                Cancel Search
+                AI Instant
               </button>
             </div>
           </div>
         </div>
       )}
-    </main>
+
+      {/* RADAR MATCHMAKING OVERLAY */}
+      {isMatching && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#181824] border border-white/15 rounded-[32px] p-8 text-center space-y-6 shadow-2xl">
+            <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border border-[#872bf5]/40 animate-radar-1" />
+              <div className="absolute inset-0 rounded-full border border-purple-400/40 animate-radar-2" />
+              <div className="absolute inset-0 rounded-full border border-white/40 animate-radar-3" />
+              <div className="w-14 h-14 rounded-full bg-[#872bf5] flex items-center justify-center text-2xl shadow-xl shadow-[#872bf5]/50 z-10">
+                {currentUser?.avatar || "🌙"}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-black text-white">Scanning Active Rooms</h3>
+              <p className="text-xs text-zinc-400 mt-1.5">{matchStatus}</p>
+              <div className="text-xs font-mono font-bold text-purple-300 mt-2">{matchSearchSeconds}s elapsed</div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelMatch}
+                className="flex-1 border border-white/10 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => handleStartMatchmaking(true)}
+                className="flex-1 bg-[#872bf5] hover:bg-[#7417e3] text-white font-bold py-3 rounded-2xl text-xs transition hover:scale-105 active:scale-95"
+              >
+                Switch to AI (Instant)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

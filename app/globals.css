@@ -1,69 +1,250 @@
 @import "tailwindcss";
 
 :root {
-  --background: #070709;
-  --foreground: #f4f4f5;
+  --primary-purple: #872bf5;
+  --primary-purple-dark: #6e1cd4;
+  --primary-purple-light: #a45aff;
+  --canvas-bg: #872bf5;
+  --app-dark: #121218;
+  --app-surface: #181824;
+  --app-bubble-in: #20202c;
+  --app-bubble-out: #872bf5;
+  --active-green: #00e676;
 }
 
 body {
-  background-color: #070709;
-  color: #f4f4f5;
+  background-color: #872bf5;
+  background-image: 
+    radial-gradient(circle at 50% 30%, #a855f7 0%, #872bf5 35%, #6d15d6 70%, #4a029e 100%);
+  color: #ffffff;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom glowing effects */
-.glow-amber {
-  box-shadow: 0 0 40px -10px rgba(251, 191, 36, 0.3);
-}
-
-.glow-teal {
-  box-shadow: 0 0 40px -10px rgba(45, 212, 191, 0.3);
-}
-
-.glow-purple {
-  box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.3);
-}
-
-/* Custom pulse radar animation */
-@keyframes radar-ripple {
+/* 1. Aurora Wave Shifting Mesh */
+@keyframes aurora-flow {
   0% {
-    transform: scale(0.8);
-    opacity: 1;
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
   100% {
-    transform: scale(2.2);
+    background-position: 0% 50%;
+  }
+}
+
+.animate-aurora {
+  background: linear-gradient(135deg, rgba(135, 43, 245, 0.4), rgba(217, 70, 239, 0.35), rgba(99, 102, 241, 0.35), rgba(168, 85, 247, 0.4));
+  background-size: 300% 300%;
+  animation: aurora-flow 12s ease infinite;
+}
+
+/* 2. Concentric Radar Pulse Rings */
+@keyframes concentric-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.06);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.25;
+  }
+}
+
+.animate-concentric-1 {
+  animation: concentric-pulse 5s ease-in-out infinite;
+}
+
+.animate-concentric-2 {
+  animation: concentric-pulse 7.5s ease-in-out infinite 1.5s;
+}
+
+.animate-concentric-3 {
+  animation: concentric-pulse 10s ease-in-out infinite 3s;
+}
+
+.animate-concentric-4 {
+  animation: concentric-pulse 12.5s ease-in-out infinite 4.5s;
+}
+
+/* 3. Orbit Rotation Animation (Planetary / Satellite dot orbiting the rings) */
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-orbit-slow {
+  animation: orbit-spin 20s linear infinite;
+}
+
+.animate-orbit-medium {
+  animation: orbit-spin 14s linear infinite reverse;
+}
+
+.animate-orbit-fast {
+  animation: orbit-spin 9s linear infinite;
+}
+
+/* 4. Rising Floating Light Particles */
+@keyframes particle-rise {
+  0% {
+    transform: translateY(110vh) scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-20vh) scale(1.1) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-particle-1 { animation: particle-rise 10s ease-in-out infinite; }
+.animate-particle-2 { animation: particle-rise 13s ease-in-out infinite 2s; }
+.animate-particle-3 { animation: particle-rise 16s ease-in-out infinite 4s; }
+.animate-particle-4 { animation: particle-rise 12s ease-in-out infinite 6s; }
+.animate-particle-5 { animation: particle-rise 18s ease-in-out infinite 1s; }
+.animate-particle-6 { animation: particle-rise 15s ease-in-out infinite 3.5s; }
+.animate-particle-7 { animation: particle-rise 11s ease-in-out infinite 5s; }
+.animate-particle-8 { animation: particle-rise 14s ease-in-out infinite 7s; }
+
+/* 5. Floating ambient orbs */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -40px) scale(1.08);
+  }
+  66% {
+    transform: translate(-25px, 20px) scale(0.95);
+  }
+}
+
+@keyframes float-reverse {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-35px, 35px) scale(1.1);
+  }
+  66% {
+    transform: translate(25px, -25px) scale(0.92);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 14s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: float-reverse 17s ease-in-out infinite;
+}
+
+/* 6. Twinkling Stars */
+@keyframes star-twinkle {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+.animate-twinkle-1 { animation: star-twinkle 3s ease-in-out infinite; }
+.animate-twinkle-2 { animation: star-twinkle 4s ease-in-out infinite 1s; }
+.animate-twinkle-3 { animation: star-twinkle 2.5s ease-in-out infinite 1.8s; }
+
+/* 7. Shimmer sweep */
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer-sweep 3s ease-in-out infinite;
+}
+
+/* 8. Radar Ping */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.4);
     opacity: 0;
   }
 }
 
 .animate-radar-1 {
-  animation: radar-ripple 2.5s cubic-bezier(0.1, 0.2, 0.7, 1) infinite;
+  animation: radar-pulse 2.2s cubic-bezier(0.1, 0.2, 0.7, 1) infinite;
 }
 
 .animate-radar-2 {
-  animation: radar-ripple 2.5s cubic-bezier(0.1, 0.2, 0.7, 1) infinite 0.8s;
+  animation: radar-pulse 2.2s cubic-bezier(0.1, 0.2, 0.7, 1) infinite 0.7s;
 }
 
 .animate-radar-3 {
-  animation: radar-ripple 2.5s cubic-bezier(0.1, 0.2, 0.7, 1) infinite 1.6s;
+  animation: radar-pulse 2.2s cubic-bezier(0.1, 0.2, 0.7, 1) infinite 1.4s;
 }
 
-/* Custom scrollbars */
+/* Modern Cyber Dot Grid Pattern */
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* Glow & Shadow Effects */
+.glow-purple {
+  box-shadow: 0 0 40px -5px rgba(135, 43, 245, 0.6);
+}
+
+.glow-app-card {
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.glow-active-green {
+  box-shadow: 0 0 12px 2px rgba(0, 230, 118, 0.7);
+}
+
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
 }

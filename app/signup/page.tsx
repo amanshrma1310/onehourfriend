@@ -3,26 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AVATARS, INTENT_ZONES, SOCIAL_GROUPS, MOODS } from "@/lib/data";
-import { ShieldCheck, Sparkles, Dices, ArrowRight, Check } from "lucide-react";
+import { AVATARS } from "@/lib/data";
+import AnimatedBackground from "@/components/AnimatedBackground";
+import { Dices, ArrowRight } from "lucide-react";
 
 export default function Signup() {
   const router = useRouter();
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [avatar, setAvatar] = useState("🌙");
-  const [activeRole, setActiveRole] = useState("PROBLEM_FACER");
-  const [intent, setIntent] = useState("PEACE");
-  const [socialGroup, setSocialGroup] = useState("OPEN");
-  const [mood, setMood] = useState("Stressed & Overwhelmed");
   const [agreed, setAgreed] = useState(true);
-  const [honeypot, setHoneypot] = useState(""); // Anti-bot honeypot
+  const [honeypot, setHoneypot] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const RANDOM_NAMES = [
-    "NightOwl_42", "CosmicWanderer", "PixelSamurai", "VelvetDreamer", "SilentNomad", "ZenExplorer", "AuraSeeker", "NeonVoyager"
+    "NightOwl_42", "CosmicWanderer", "PixelSamurai", "VelvetDreamer", "SilentNomad", "ZenExplorer", "AuraSeeker", "NeonVoyager", "AstroGuy_77", "LunaSoul_9"
   ];
 
   function generateRandomHandle() {
@@ -35,7 +31,7 @@ export default function Signup() {
     setError("");
 
     if (!username.trim()) {
-      setError("Please choose an anonymous username");
+      setError("Please choose an anonymous handle");
       return;
     }
 
@@ -52,21 +48,20 @@ export default function Signup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: username.trim(),
-          email: email.trim() || undefined,
           password: password || undefined,
           avatar,
-          activeRole,
-          intent,
-          socialGroup,
-          mood,
-          website: honeypot, // Pass honeypot
+          activeRole: "PROBLEM_FACER",
+          intent: "PEACE",
+          socialGroup: "OPEN",
+          mood: "Need to vent",
+          website: honeypot,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to sign up");
+        throw new Error(data.error || "Failed to create persona");
       }
 
       router.push("/dashboard");
@@ -78,37 +73,39 @@ export default function Signup() {
   }
 
   return (
-    <main className="min-h-screen bg-[#070709] text-white flex items-center justify-center p-6 py-12">
-      <div className="w-full max-w-xl">
+    <main className="min-h-screen bg-[#872bf5] text-white flex items-center justify-center p-6 py-12 relative overflow-hidden selection:bg-white selection:text-[#872bf5]">
+      {/* Animated Background System */}
+      <AnimatedBackground />
+
+      <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-amber-400 text-black font-bold flex items-center justify-center text-sm">
+          <Link href="/" className="inline-flex items-center gap-2 mb-4 hover:scale-105 transition">
+            <div className="w-10 h-10 rounded-2xl bg-white text-[#872bf5] font-black flex items-center justify-center text-sm shadow-xl shadow-black/20">
               1H
             </div>
-            <span className="text-sm font-bold tracking-wider text-zinc-300">
+            <span className="text-sm font-black tracking-wider text-white">
               ONE HOUR FRIEND
             </span>
           </Link>
 
-          <h1 className="text-3xl font-extrabold text-white">
-            Create Your Anonymous Persona
+          <h1 className="text-3xl font-black text-white drop-shadow-md">
+            Create Your Persona
           </h1>
-          <p className="text-zinc-400 text-xs mt-2">
-            No real identity required. 100% confidential and judgment-free.
+          <p className="text-purple-200 text-xs mt-1.5 font-medium">
+            100% anonymous, safe & instant access.
           </p>
         </div>
 
         {/* Card */}
-        <div className="border border-white/10 bg-zinc-900/60 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-2xl">
+        <div className="border border-white/15 bg-[#121218] rounded-[32px] p-7 md:p-8 shadow-2xl space-y-5">
           {error && (
-            <div className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
+            <div className="p-3 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold">
               ⚠️ {error}
             </div>
           )}
 
-          <form onSubmit={handleSignup} className="space-y-6">
-            {/* Anti-Bot Honeypot (Invisible to humans) */}
+          <form onSubmit={handleSignup} className="space-y-4.5">
             <input
               type="text"
               name="website"
@@ -121,19 +118,19 @@ export default function Signup() {
 
             {/* Avatar Picker */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-2">
+              <label className="block text-xs font-bold text-zinc-300 mb-2">
                 Choose Your Avatar
               </label>
-              <div className="flex items-center gap-2 flex-wrap bg-black/40 p-3 rounded-2xl border border-white/5">
-                {AVATARS.map((a) => (
+              <div className="flex items-center gap-2 flex-wrap bg-[#181824] p-2.5 rounded-2xl border border-white/5">
+                {AVATARS.slice(0, 10).map((a) => (
                   <button
                     key={a}
                     type="button"
                     onClick={() => setAvatar(a)}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition ${
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg transition ${
                       avatar === a
-                        ? "bg-amber-400 scale-110 shadow-lg shadow-amber-400/30"
-                        : "bg-zinc-800/60 hover:bg-zinc-700"
+                        ? "bg-[#872bf5] text-white scale-110 shadow-lg shadow-[#872bf5]/40"
+                        : "bg-white/[0.04] hover:bg-white/10"
                     }`}
                   >
                     {a}
@@ -142,16 +139,16 @@ export default function Signup() {
               </div>
             </div>
 
-            {/* Username with Dice Button */}
+            {/* Anonymous Handle */}
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-xs font-semibold text-zinc-300">
-                  Anonymous Username
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-xs font-bold text-zinc-300">
+                  Anonymous Handle
                 </label>
                 <button
                   type="button"
                   onClick={generateRandomHandle}
-                  className="flex items-center gap-1 text-[11px] text-amber-400 hover:underline"
+                  className="flex items-center gap-1 text-[11px] text-purple-300 hover:underline font-bold"
                 >
                   <Dices className="w-3.5 h-3.5" />
                   <span>Randomize Handle</span>
@@ -164,123 +161,35 @@ export default function Signup() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-amber-400 transition"
+                className="w-full bg-[#181824] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-[#872bf5] transition"
               />
             </div>
 
-            {/* Role Preference */}
+            {/* Optional Password */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                How do you want to start today?
+              <label className="block text-xs font-bold text-zinc-300 mb-1.5">
+                Password (Optional)
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: "PROBLEM_FACER", label: "👤 Problem Facer", desc: "Seek guidance" },
-                  { id: "GUIDER", label: "🧭 Guider", desc: "Help & listen" },
-                  { id: "CASUAL_CHILL", label: "☕ Casual Chill", desc: "Just talk" },
-                ].map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setActiveRole(r.id)}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      activeRole === r.id
-                        ? "bg-amber-400/10 border-amber-400 text-amber-300"
-                        : "bg-black/30 border-white/5 text-zinc-400 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{r.label}</div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">{r.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Intent Zone */}
-            <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                Your Primary Conversation Intent
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {INTENT_ZONES.map((zone) => (
-                  <button
-                    key={zone.id}
-                    type="button"
-                    onClick={() => setIntent(zone.id)}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      intent === zone.id
-                        ? "bg-white/10 border-amber-400 text-white"
-                        : "bg-black/30 border-white/5 text-zinc-400 hover:border-white/15"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{zone.emoji}</span>
-                      <span className="text-xs font-bold text-white">{zone.name}</span>
-                    </div>
-                    <div className="text-[10px] text-zinc-400 mt-1 line-clamp-1">{zone.tagline}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Social Group */}
-            <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                Select Your Social Circle
-              </label>
-              <select
-                value={socialGroup}
-                onChange={(e) => setSocialGroup(e.target.value)}
-                className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-400"
-              >
-                {SOCIAL_GROUPS.map((g) => (
-                  <option key={g.id} value={g.id} className="bg-zinc-900 text-white">
-                    {g.emoji} {g.name} — {g.tagline}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Email & Password (Optional for quick starts) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-white/5">
-              <div>
-                <label className="block text-[11px] text-zinc-400 mb-1">
-                  Email (Optional)
-                </label>
-                <input
-                  type="email"
-                  placeholder="For account recovery"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] text-zinc-400 mb-1">
-                  Password (Optional)
-                </label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-amber-400"
-                />
-              </div>
+              <input
+                type="password"
+                placeholder="Leave blank for instant 1-click access"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#181824] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-[#872bf5] transition"
+              />
             </div>
 
             {/* Safety Pledge */}
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-400/5 border border-amber-400/20">
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-white/[0.03] border border-white/5">
               <input
                 type="checkbox"
                 id="safety-pledge"
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
-                className="mt-0.5 rounded border-amber-400 text-amber-400 focus:ring-0"
+                className="mt-0.5 rounded border-white/20 text-[#872bf5] focus:ring-0"
               />
-              <label htmlFor="safety-pledge" className="text-[11px] text-zinc-300 cursor-pointer">
-                I agree to respect boundaries, maintain anonymity, and uphold a zero-tolerance policy against harassment.
+              <label htmlFor="safety-pledge" className="text-[11px] text-zinc-400 cursor-pointer leading-snug">
+                I agree to respect boundaries, maintain anonymity, and uphold a zero-tolerance policy for abuse.
               </label>
             </div>
 
@@ -288,10 +197,10 @@ export default function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-400 text-black font-bold py-3.5 rounded-xl text-sm hover:bg-amber-300 transition shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-[#872bf5] hover:bg-[#7417e3] text-white font-black py-3.5 rounded-2xl text-xs transition shadow-xl shadow-[#872bf5]/40 flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-105 active:scale-95"
             >
               {loading ? (
-                <span>Creating Persona...</span>
+                <span>Entering Room...</span>
               ) : (
                 <>
                   <span>Enter One Hour Friend</span>
@@ -302,9 +211,9 @@ export default function Signup() {
           </form>
 
           {/* Login Link */}
-          <p className="text-center text-xs text-zinc-400 mt-6">
+          <p className="text-center text-xs text-zinc-400 pt-3 border-t border-white/5">
             Already have an account?{" "}
-            <Link href="/login" className="text-amber-400 hover:underline font-medium">
+            <Link href="/login" className="text-purple-300 hover:underline font-bold">
               Sign In here
             </Link>
           </p>

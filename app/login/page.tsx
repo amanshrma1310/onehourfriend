@@ -4,13 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEMO_USERS } from "@/lib/data";
+import AnimatedBackground from "@/components/AnimatedBackground";
 import { ArrowRight, Sparkles, KeyRound, User } from "lucide-react";
 
 export default function Login() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [honeypot, setHoneypot] = useState(""); // Anti-bot honeypot
+  const [honeypot, setHoneypot] = useState("");
   const [loading, setLoading] = useState(false);
   const [demoLoadingIndex, setDemoLoadingIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -27,7 +28,7 @@ export default function Login() {
         body: JSON.stringify({
           identifier: identifier.trim(),
           password,
-          website: honeypot, // Pass honeypot
+          website: honeypot,
         }),
       });
 
@@ -71,37 +72,39 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-[#070709] text-white flex items-center justify-center p-6 py-12">
-      <div className="w-full max-w-md">
+    <main className="min-h-screen bg-[#872bf5] text-white flex items-center justify-center p-6 py-12 relative overflow-hidden selection:bg-white selection:text-[#872bf5]">
+      {/* Animated Background System */}
+      <AnimatedBackground />
+
+      <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-amber-400 text-black font-bold flex items-center justify-center text-sm">
+          <Link href="/" className="inline-flex items-center gap-2 mb-4 hover:scale-105 transition">
+            <div className="w-10 h-10 rounded-2xl bg-white text-[#872bf5] font-black flex items-center justify-center text-sm shadow-xl shadow-black/20">
               1H
             </div>
-            <span className="text-sm font-bold tracking-wider text-zinc-300">
+            <span className="text-sm font-black tracking-wider text-white">
               ONE HOUR FRIEND
             </span>
           </Link>
 
-          <h1 className="text-3xl font-extrabold text-white">
-            Welcome Back 👋
+          <h1 className="text-3xl font-black text-white drop-shadow-md">
+            Welcome Back
           </h1>
-          <p className="text-zinc-400 text-xs mt-2">
-            Ready for your next meaningful 60-minute conversation?
+          <p className="text-purple-200 text-xs mt-1.5 font-medium">
+            Sign in to start your 60-minute conversation.
           </p>
         </div>
 
         {/* Card */}
-        <div className="border border-white/10 bg-zinc-900/60 backdrop-blur-xl rounded-3xl p-7 shadow-2xl">
+        <div className="border border-white/15 bg-[#121218] rounded-[32px] p-7 md:p-8 shadow-2xl space-y-5">
           {error && (
-            <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
+            <div className="p-3 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold">
               ⚠️ {error}
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
-            {/* Anti-Bot Honeypot (Invisible to humans) */}
             <input
               type="text"
               name="website"
@@ -113,8 +116,8 @@ export default function Login() {
             />
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                Username or Email
+              <label className="block text-xs font-bold text-zinc-300 mb-1.5">
+                Anonymous Handle or Email
               </label>
               <div className="relative">
                 <input
@@ -123,14 +126,14 @@ export default function Login() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   required
-                  className="w-full bg-black/60 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-amber-400"
+                  className="w-full bg-[#181824] border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-[#872bf5]"
                 />
                 <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+              <label className="block text-xs font-bold text-zinc-300 mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -139,7 +142,7 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-amber-400"
+                  className="w-full bg-[#181824] border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-[#872bf5]"
                 />
                 <KeyRound className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5" />
               </div>
@@ -148,7 +151,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-400 text-black font-bold py-3.5 rounded-xl text-xs hover:bg-amber-300 transition shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+              className="w-full bg-[#872bf5] hover:bg-[#7417e3] text-white font-black py-3.5 rounded-2xl text-xs transition shadow-xl shadow-[#872bf5]/40 flex items-center justify-center gap-2 mt-2 disabled:opacity-50 hover:scale-105 active:scale-95"
             >
               {loading ? (
                 <span>Signing in...</span>
@@ -161,16 +164,14 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="h-px bg-white/10 flex-1"></div>
-            <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
-              Or 1-Click Instant Testing
+          <div className="flex items-center gap-4 my-4">
+            <div className="h-px bg-white/10 flex-1" />
+            <span className="text-[10px] uppercase font-black text-zinc-500 tracking-wider">
+              1-Click Fast Personas
             </span>
-            <div className="h-px bg-white/10 flex-1"></div>
+            <div className="h-px bg-white/10 flex-1" />
           </div>
 
-          {/* 1-Click Demo Accounts */}
           <div className="space-y-2">
             {DEMO_USERS.map((demo, idx) => (
               <button
@@ -178,12 +179,12 @@ export default function Login() {
                 type="button"
                 onClick={() => handleDemoLogin(idx)}
                 disabled={demoLoadingIndex !== null}
-                className="w-full p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-amber-400/30 text-left transition flex items-center justify-between group disabled:opacity-50"
+                className="w-full p-3 rounded-2xl bg-[#181824] hover:bg-[#202030] border border-white/5 hover:border-[#872bf5]/50 text-left transition flex items-center justify-between group disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{demo.avatar}</span>
+                  <span className="text-2xl">{demo.avatar}</span>
                   <div>
-                    <div className="text-xs font-bold text-white group-hover:text-amber-300">
+                    <div className="text-xs font-bold text-white group-hover:text-purple-300 transition">
                       {demo.username}
                     </div>
                     <div className="text-[10px] text-zinc-400">
@@ -191,17 +192,16 @@ export default function Login() {
                     </div>
                   </div>
                 </div>
-                <span className="text-[10px] text-zinc-500 group-hover:text-amber-400 font-semibold">
+                <span className="text-[10px] text-purple-400 group-hover:text-purple-300 font-bold">
                   {demoLoadingIndex === idx ? "Logging in..." : "Login →"}
                 </span>
               </button>
             ))}
           </div>
 
-          {/* Signup Link */}
-          <p className="text-center text-xs text-zinc-400 mt-6 pt-4 border-t border-white/5">
+          <p className="text-center text-xs text-zinc-400 pt-3 border-t border-white/5">
             Don't have an account?{" "}
-            <Link href="/signup" className="text-amber-400 hover:underline font-medium">
+            <Link href="/signup" className="text-purple-300 hover:underline font-bold">
               Create one for free
             </Link>
           </p>

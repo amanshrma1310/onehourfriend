@@ -333,6 +333,7 @@ export type ConversationSessionOrderByWithRelationInput = {
   userTwo?: Prisma.UserOrderByWithRelationInput
   messages?: Prisma.MessageOrderByRelationAggregateInput
   ratings?: Prisma.RatingOrderByRelationAggregateInput
+  _relevance?: Prisma.ConversationSessionOrderByRelevanceInput
 }
 
 export type ConversationSessionWhereUniqueInput = Prisma.AtLeast<{
@@ -594,6 +595,12 @@ export type ConversationSessionOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type ConversationSessionOrderByRelevanceInput = {
+  fields: Prisma.ConversationSessionOrderByRelevanceFieldEnum | Prisma.ConversationSessionOrderByRelevanceFieldEnum[]
+  sort: Prisma.SortOrder
+  search: string
+}
+
 export type ConversationSessionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userOneId?: Prisma.SortOrder
@@ -835,6 +842,7 @@ export type ConversationSessionCreateOrConnectWithoutUserOneInput = {
 
 export type ConversationSessionCreateManyUserOneInputEnvelope = {
   data: Prisma.ConversationSessionCreateManyUserOneInput | Prisma.ConversationSessionCreateManyUserOneInput[]
+  skipDuplicates?: boolean
 }
 
 export type ConversationSessionCreateWithoutUserTwoInput = {
@@ -892,6 +900,7 @@ export type ConversationSessionCreateOrConnectWithoutUserTwoInput = {
 
 export type ConversationSessionCreateManyUserTwoInputEnvelope = {
   data: Prisma.ConversationSessionCreateManyUserTwoInput | Prisma.ConversationSessionCreateManyUserTwoInput[]
+  skipDuplicates?: boolean
 }
 
 export type ConversationSessionUpsertWithWhereUniqueWithoutUserOneInput = {
@@ -1428,55 +1437,7 @@ export type ConversationSessionSelect<ExtArgs extends runtime.Types.Extensions.I
   _count?: boolean | Prisma.ConversationSessionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["conversationSession"]>
 
-export type ConversationSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  userOneId?: boolean
-  userTwoId?: boolean
-  roleOne?: boolean
-  roleTwo?: boolean
-  intent?: boolean
-  socialGroup?: boolean
-  topic?: boolean
-  mood?: boolean
-  problemSummary?: boolean
-  status?: boolean
-  matchedAt?: boolean
-  startedAt?: boolean
-  expiresAt?: boolean
-  endedAt?: boolean
-  userOneKept?: boolean
-  userTwoKept?: boolean
-  isCompanion?: boolean
-  createdAt?: boolean
-  updatedAt?: boolean
-  userOne?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  userTwo?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["conversationSession"]>
 
-export type ConversationSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  userOneId?: boolean
-  userTwoId?: boolean
-  roleOne?: boolean
-  roleTwo?: boolean
-  intent?: boolean
-  socialGroup?: boolean
-  topic?: boolean
-  mood?: boolean
-  problemSummary?: boolean
-  status?: boolean
-  matchedAt?: boolean
-  startedAt?: boolean
-  expiresAt?: boolean
-  endedAt?: boolean
-  userOneKept?: boolean
-  userTwoKept?: boolean
-  isCompanion?: boolean
-  createdAt?: boolean
-  updatedAt?: boolean
-  userOne?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  userTwo?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["conversationSession"]>
 
 export type ConversationSessionSelectScalar = {
   id?: boolean
@@ -1508,14 +1469,6 @@ export type ConversationSessionInclude<ExtArgs extends runtime.Types.Extensions.
   messages?: boolean | Prisma.ConversationSession$messagesArgs<ExtArgs>
   ratings?: boolean | Prisma.ConversationSession$ratingsArgs<ExtArgs>
   _count?: boolean | Prisma.ConversationSessionCountOutputTypeDefaultArgs<ExtArgs>
-}
-export type ConversationSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  userOne?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  userTwo?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}
-export type ConversationSessionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  userOne?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  userTwo?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
 export type $ConversationSessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1665,30 +1618,6 @@ export interface ConversationSessionDelegate<ExtArgs extends runtime.Types.Exten
   createMany<T extends ConversationSessionCreateManyArgs>(args?: Prisma.SelectSubset<T, ConversationSessionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
-   * Create many ConversationSessions and returns the data saved in the database.
-   * @param {ConversationSessionCreateManyAndReturnArgs} args - Arguments to create many ConversationSessions.
-   * @example
-   * // Create many ConversationSessions
-   * const conversationSession = await prisma.conversationSession.createManyAndReturn({
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Create many ConversationSessions and only return the `id`
-   * const conversationSessionWithIdOnly = await prisma.conversationSession.createManyAndReturn({
-   *   select: { id: true },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  createManyAndReturn<T extends ConversationSessionCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, ConversationSessionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationSessionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-  /**
    * Delete a ConversationSession.
    * @param {ConversationSessionDeleteArgs} args - Arguments to delete one ConversationSession.
    * @example
@@ -1751,36 +1680,6 @@ export interface ConversationSessionDelegate<ExtArgs extends runtime.Types.Exten
    * 
    */
   updateMany<T extends ConversationSessionUpdateManyArgs>(args: Prisma.SelectSubset<T, ConversationSessionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
-
-  /**
-   * Update zero or more ConversationSessions and returns the data updated in the database.
-   * @param {ConversationSessionUpdateManyAndReturnArgs} args - Arguments to update many ConversationSessions.
-   * @example
-   * // Update many ConversationSessions
-   * const conversationSession = await prisma.conversationSession.updateManyAndReturn({
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Update zero or more ConversationSessions and only return the `id`
-   * const conversationSessionWithIdOnly = await prisma.conversationSession.updateManyAndReturn({
-   *   select: { id: true },
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  updateManyAndReturn<T extends ConversationSessionUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, ConversationSessionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConversationSessionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one ConversationSession.
@@ -2228,28 +2127,7 @@ export type ConversationSessionCreateManyArgs<ExtArgs extends runtime.Types.Exte
    * The data used to create many ConversationSessions.
    */
   data: Prisma.ConversationSessionCreateManyInput | Prisma.ConversationSessionCreateManyInput[]
-}
-
-/**
- * ConversationSession createManyAndReturn
- */
-export type ConversationSessionCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the ConversationSession
-   */
-  select?: Prisma.ConversationSessionSelectCreateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the ConversationSession
-   */
-  omit?: Prisma.ConversationSessionOmit<ExtArgs> | null
-  /**
-   * The data used to create many ConversationSessions.
-   */
-  data: Prisma.ConversationSessionCreateManyInput | Prisma.ConversationSessionCreateManyInput[]
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.ConversationSessionIncludeCreateManyAndReturn<ExtArgs> | null
+  skipDuplicates?: boolean
 }
 
 /**
@@ -2294,36 +2172,6 @@ export type ConversationSessionUpdateManyArgs<ExtArgs extends runtime.Types.Exte
    * Limit how many ConversationSessions to update.
    */
   limit?: number
-}
-
-/**
- * ConversationSession updateManyAndReturn
- */
-export type ConversationSessionUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the ConversationSession
-   */
-  select?: Prisma.ConversationSessionSelectUpdateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the ConversationSession
-   */
-  omit?: Prisma.ConversationSessionOmit<ExtArgs> | null
-  /**
-   * The data used to update ConversationSessions.
-   */
-  data: Prisma.XOR<Prisma.ConversationSessionUpdateManyMutationInput, Prisma.ConversationSessionUncheckedUpdateManyInput>
-  /**
-   * Filter which ConversationSessions to update
-   */
-  where?: Prisma.ConversationSessionWhereInput
-  /**
-   * Limit how many ConversationSessions to update.
-   */
-  limit?: number
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.ConversationSessionIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

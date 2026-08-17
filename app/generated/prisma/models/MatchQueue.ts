@@ -217,6 +217,7 @@ export type MatchQueueOrderByWithRelationInput = {
   mood?: Prisma.SortOrder
   problemSummary?: Prisma.SortOrderInput | Prisma.SortOrder
   enteredAt?: Prisma.SortOrder
+  _relevance?: Prisma.MatchQueueOrderByRelevanceInput
 }
 
 export type MatchQueueWhereUniqueInput = Prisma.AtLeast<{
@@ -338,6 +339,12 @@ export type MatchQueueUncheckedUpdateManyInput = {
   enteredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type MatchQueueOrderByRelevanceInput = {
+  fields: Prisma.MatchQueueOrderByRelevanceFieldEnum | Prisma.MatchQueueOrderByRelevanceFieldEnum[]
+  sort: Prisma.SortOrder
+  search: string
+}
+
 export type MatchQueueCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -384,27 +391,7 @@ export type MatchQueueSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   enteredAt?: boolean
 }, ExtArgs["result"]["matchQueue"]>
 
-export type MatchQueueSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  userId?: boolean
-  role?: boolean
-  intent?: boolean
-  socialGroup?: boolean
-  mood?: boolean
-  problemSummary?: boolean
-  enteredAt?: boolean
-}, ExtArgs["result"]["matchQueue"]>
 
-export type MatchQueueSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  userId?: boolean
-  role?: boolean
-  intent?: boolean
-  socialGroup?: boolean
-  mood?: boolean
-  problemSummary?: boolean
-  enteredAt?: boolean
-}, ExtArgs["result"]["matchQueue"]>
 
 export type MatchQueueSelectScalar = {
   id?: boolean
@@ -549,30 +536,6 @@ export interface MatchQueueDelegate<ExtArgs extends runtime.Types.Extensions.Int
   createMany<T extends MatchQueueCreateManyArgs>(args?: Prisma.SelectSubset<T, MatchQueueCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
-   * Create many MatchQueues and returns the data saved in the database.
-   * @param {MatchQueueCreateManyAndReturnArgs} args - Arguments to create many MatchQueues.
-   * @example
-   * // Create many MatchQueues
-   * const matchQueue = await prisma.matchQueue.createManyAndReturn({
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Create many MatchQueues and only return the `id`
-   * const matchQueueWithIdOnly = await prisma.matchQueue.createManyAndReturn({
-   *   select: { id: true },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  createManyAndReturn<T extends MatchQueueCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, MatchQueueCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatchQueuePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-  /**
    * Delete a MatchQueue.
    * @param {MatchQueueDeleteArgs} args - Arguments to delete one MatchQueue.
    * @example
@@ -635,36 +598,6 @@ export interface MatchQueueDelegate<ExtArgs extends runtime.Types.Extensions.Int
    * 
    */
   updateMany<T extends MatchQueueUpdateManyArgs>(args: Prisma.SelectSubset<T, MatchQueueUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
-
-  /**
-   * Update zero or more MatchQueues and returns the data updated in the database.
-   * @param {MatchQueueUpdateManyAndReturnArgs} args - Arguments to update many MatchQueues.
-   * @example
-   * // Update many MatchQueues
-   * const matchQueue = await prisma.matchQueue.updateManyAndReturn({
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Update zero or more MatchQueues and only return the `id`
-   * const matchQueueWithIdOnly = await prisma.matchQueue.updateManyAndReturn({
-   *   select: { id: true },
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  updateManyAndReturn<T extends MatchQueueUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, MatchQueueUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatchQueuePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one MatchQueue.
@@ -1072,24 +1005,7 @@ export type MatchQueueCreateManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * The data used to create many MatchQueues.
    */
   data: Prisma.MatchQueueCreateManyInput | Prisma.MatchQueueCreateManyInput[]
-}
-
-/**
- * MatchQueue createManyAndReturn
- */
-export type MatchQueueCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the MatchQueue
-   */
-  select?: Prisma.MatchQueueSelectCreateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the MatchQueue
-   */
-  omit?: Prisma.MatchQueueOmit<ExtArgs> | null
-  /**
-   * The data used to create many MatchQueues.
-   */
-  data: Prisma.MatchQueueCreateManyInput | Prisma.MatchQueueCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1118,32 +1034,6 @@ export type MatchQueueUpdateArgs<ExtArgs extends runtime.Types.Extensions.Intern
  * MatchQueue updateMany
  */
 export type MatchQueueUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * The data used to update MatchQueues.
-   */
-  data: Prisma.XOR<Prisma.MatchQueueUpdateManyMutationInput, Prisma.MatchQueueUncheckedUpdateManyInput>
-  /**
-   * Filter which MatchQueues to update
-   */
-  where?: Prisma.MatchQueueWhereInput
-  /**
-   * Limit how many MatchQueues to update.
-   */
-  limit?: number
-}
-
-/**
- * MatchQueue updateManyAndReturn
- */
-export type MatchQueueUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the MatchQueue
-   */
-  select?: Prisma.MatchQueueSelectUpdateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the MatchQueue
-   */
-  omit?: Prisma.MatchQueueOmit<ExtArgs> | null
   /**
    * The data used to update MatchQueues.
    */

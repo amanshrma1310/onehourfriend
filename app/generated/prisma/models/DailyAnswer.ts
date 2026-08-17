@@ -255,6 +255,7 @@ export type DailyAnswerOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   question?: Prisma.DailyQuestionOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
+  _relevance?: Prisma.DailyAnswerOrderByRelevanceInput
 }
 
 export type DailyAnswerWhereUniqueInput = Prisma.AtLeast<{
@@ -386,6 +387,12 @@ export type DailyAnswerListRelationFilter = {
 
 export type DailyAnswerOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type DailyAnswerOrderByRelevanceInput = {
+  fields: Prisma.DailyAnswerOrderByRelevanceFieldEnum | Prisma.DailyAnswerOrderByRelevanceFieldEnum[]
+  sort: Prisma.SortOrder
+  search: string
 }
 
 export type DailyAnswerCountOrderByAggregateInput = {
@@ -540,6 +547,7 @@ export type DailyAnswerCreateOrConnectWithoutUserInput = {
 
 export type DailyAnswerCreateManyUserInputEnvelope = {
   data: Prisma.DailyAnswerCreateManyUserInput | Prisma.DailyAnswerCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type DailyAnswerUpsertWithWhereUniqueWithoutUserInput = {
@@ -599,6 +607,7 @@ export type DailyAnswerCreateOrConnectWithoutQuestionInput = {
 
 export type DailyAnswerCreateManyQuestionInputEnvelope = {
   data: Prisma.DailyAnswerCreateManyQuestionInput | Prisma.DailyAnswerCreateManyQuestionInput[]
+  skipDuplicates?: boolean
 }
 
 export type DailyAnswerUpsertWithWhereUniqueWithoutQuestionInput = {
@@ -712,31 +721,7 @@ export type DailyAnswerSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["dailyAnswer"]>
 
-export type DailyAnswerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  questionId?: boolean
-  userId?: boolean
-  anonymousName?: boolean
-  avatar?: boolean
-  answer?: boolean
-  likesCount?: boolean
-  createdAt?: boolean
-  question?: boolean | Prisma.DailyQuestionDefaultArgs<ExtArgs>
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["dailyAnswer"]>
 
-export type DailyAnswerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  questionId?: boolean
-  userId?: boolean
-  anonymousName?: boolean
-  avatar?: boolean
-  answer?: boolean
-  likesCount?: boolean
-  createdAt?: boolean
-  question?: boolean | Prisma.DailyQuestionDefaultArgs<ExtArgs>
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["dailyAnswer"]>
 
 export type DailyAnswerSelectScalar = {
   id?: boolean
@@ -751,14 +736,6 @@ export type DailyAnswerSelectScalar = {
 
 export type DailyAnswerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "questionId" | "userId" | "anonymousName" | "avatar" | "answer" | "likesCount" | "createdAt", ExtArgs["result"]["dailyAnswer"]>
 export type DailyAnswerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  question?: boolean | Prisma.DailyQuestionDefaultArgs<ExtArgs>
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}
-export type DailyAnswerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  question?: boolean | Prisma.DailyQuestionDefaultArgs<ExtArgs>
-  user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}
-export type DailyAnswerIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   question?: boolean | Prisma.DailyQuestionDefaultArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -896,30 +873,6 @@ export interface DailyAnswerDelegate<ExtArgs extends runtime.Types.Extensions.In
   createMany<T extends DailyAnswerCreateManyArgs>(args?: Prisma.SelectSubset<T, DailyAnswerCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
-   * Create many DailyAnswers and returns the data saved in the database.
-   * @param {DailyAnswerCreateManyAndReturnArgs} args - Arguments to create many DailyAnswers.
-   * @example
-   * // Create many DailyAnswers
-   * const dailyAnswer = await prisma.dailyAnswer.createManyAndReturn({
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Create many DailyAnswers and only return the `id`
-   * const dailyAnswerWithIdOnly = await prisma.dailyAnswer.createManyAndReturn({
-   *   select: { id: true },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  createManyAndReturn<T extends DailyAnswerCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, DailyAnswerCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DailyAnswerPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-  /**
    * Delete a DailyAnswer.
    * @param {DailyAnswerDeleteArgs} args - Arguments to delete one DailyAnswer.
    * @example
@@ -982,36 +935,6 @@ export interface DailyAnswerDelegate<ExtArgs extends runtime.Types.Extensions.In
    * 
    */
   updateMany<T extends DailyAnswerUpdateManyArgs>(args: Prisma.SelectSubset<T, DailyAnswerUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
-
-  /**
-   * Update zero or more DailyAnswers and returns the data updated in the database.
-   * @param {DailyAnswerUpdateManyAndReturnArgs} args - Arguments to update many DailyAnswers.
-   * @example
-   * // Update many DailyAnswers
-   * const dailyAnswer = await prisma.dailyAnswer.updateManyAndReturn({
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Update zero or more DailyAnswers and only return the `id`
-   * const dailyAnswerWithIdOnly = await prisma.dailyAnswer.updateManyAndReturn({
-   *   select: { id: true },
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  updateManyAndReturn<T extends DailyAnswerUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, DailyAnswerUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DailyAnswerPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one DailyAnswer.
@@ -1445,28 +1368,7 @@ export type DailyAnswerCreateManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * The data used to create many DailyAnswers.
    */
   data: Prisma.DailyAnswerCreateManyInput | Prisma.DailyAnswerCreateManyInput[]
-}
-
-/**
- * DailyAnswer createManyAndReturn
- */
-export type DailyAnswerCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the DailyAnswer
-   */
-  select?: Prisma.DailyAnswerSelectCreateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the DailyAnswer
-   */
-  omit?: Prisma.DailyAnswerOmit<ExtArgs> | null
-  /**
-   * The data used to create many DailyAnswers.
-   */
-  data: Prisma.DailyAnswerCreateManyInput | Prisma.DailyAnswerCreateManyInput[]
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.DailyAnswerIncludeCreateManyAndReturn<ExtArgs> | null
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1511,36 +1413,6 @@ export type DailyAnswerUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many DailyAnswers to update.
    */
   limit?: number
-}
-
-/**
- * DailyAnswer updateManyAndReturn
- */
-export type DailyAnswerUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the DailyAnswer
-   */
-  select?: Prisma.DailyAnswerSelectUpdateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the DailyAnswer
-   */
-  omit?: Prisma.DailyAnswerOmit<ExtArgs> | null
-  /**
-   * The data used to update DailyAnswers.
-   */
-  data: Prisma.XOR<Prisma.DailyAnswerUpdateManyMutationInput, Prisma.DailyAnswerUncheckedUpdateManyInput>
-  /**
-   * Filter which DailyAnswers to update
-   */
-  where?: Prisma.DailyAnswerWhereInput
-  /**
-   * Limit how many DailyAnswers to update.
-   */
-  limit?: number
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.DailyAnswerIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

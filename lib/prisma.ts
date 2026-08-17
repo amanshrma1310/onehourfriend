@@ -1,28 +1,16 @@
 import { PrismaClient } from "@/app/generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
 function createPrismaClient() {
-  // If Turso Cloud database is configured
-  const tursoUrl = process.env.TURSO_DATABASE_URL;
-  const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
+  const url =
+    process.env.DATABASE_URL ||
+    "mysql://amandeepsharma:Ishu%401310@localhost:3306/onehourfriend";
 
-  if (tursoUrl) {
-    const adapter = new PrismaLibSql({
-      url: tursoUrl,
-      authToken: tursoAuthToken,
-    });
-    return new PrismaClient({ adapter });
-  }
-
-  // Default to local SQLite dev.db
-  const url = process.env.DATABASE_URL || "file:./dev.db";
-  const adapter = new PrismaLibSql({
-    url: url.startsWith("file:") ? url : `file:${url}`,
-  });
+  const adapter = new PrismaMariaDb(url);
   return new PrismaClient({ adapter });
 }
 

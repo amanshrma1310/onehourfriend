@@ -185,6 +185,7 @@ export type BlockOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   blocked?: Prisma.UserOrderByWithRelationInput
   blocker?: Prisma.UserOrderByWithRelationInput
+  _relevance?: Prisma.BlockOrderByRelevanceInput
 }
 
 export type BlockWhereUniqueInput = Prisma.AtLeast<{
@@ -275,6 +276,12 @@ export type BlockListRelationFilter = {
 
 export type BlockOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type BlockOrderByRelevanceInput = {
+  fields: Prisma.BlockOrderByRelevanceFieldEnum | Prisma.BlockOrderByRelevanceFieldEnum[]
+  sort: Prisma.SortOrder
+  search: string
 }
 
 export type BlockBlockerIdBlockedIdCompoundUniqueInput = {
@@ -406,6 +413,7 @@ export type BlockCreateOrConnectWithoutBlockedInput = {
 
 export type BlockCreateManyBlockedInputEnvelope = {
   data: Prisma.BlockCreateManyBlockedInput | Prisma.BlockCreateManyBlockedInput[]
+  skipDuplicates?: boolean
 }
 
 export type BlockCreateWithoutBlockerInput = {
@@ -427,6 +435,7 @@ export type BlockCreateOrConnectWithoutBlockerInput = {
 
 export type BlockCreateManyBlockerInputEnvelope = {
   data: Prisma.BlockCreateManyBlockerInput | Prisma.BlockCreateManyBlockerInput[]
+  skipDuplicates?: boolean
 }
 
 export type BlockUpsertWithWhereUniqueWithoutBlockedInput = {
@@ -530,23 +539,7 @@ export type BlockSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   blocker?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["block"]>
 
-export type BlockSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  blockerId?: boolean
-  blockedId?: boolean
-  createdAt?: boolean
-  blocked?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  blocker?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["block"]>
 
-export type BlockSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  blockerId?: boolean
-  blockedId?: boolean
-  createdAt?: boolean
-  blocked?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  blocker?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}, ExtArgs["result"]["block"]>
 
 export type BlockSelectScalar = {
   id?: boolean
@@ -557,14 +550,6 @@ export type BlockSelectScalar = {
 
 export type BlockOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "blockerId" | "blockedId" | "createdAt", ExtArgs["result"]["block"]>
 export type BlockInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  blocked?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  blocker?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}
-export type BlockIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  blocked?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  blocker?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-}
-export type BlockIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   blocked?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   blocker?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -698,30 +683,6 @@ export interface BlockDelegate<ExtArgs extends runtime.Types.Extensions.Internal
   createMany<T extends BlockCreateManyArgs>(args?: Prisma.SelectSubset<T, BlockCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
-   * Create many Blocks and returns the data saved in the database.
-   * @param {BlockCreateManyAndReturnArgs} args - Arguments to create many Blocks.
-   * @example
-   * // Create many Blocks
-   * const block = await prisma.block.createManyAndReturn({
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Create many Blocks and only return the `id`
-   * const blockWithIdOnly = await prisma.block.createManyAndReturn({
-   *   select: { id: true },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  createManyAndReturn<T extends BlockCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, BlockCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BlockPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-  /**
    * Delete a Block.
    * @param {BlockDeleteArgs} args - Arguments to delete one Block.
    * @example
@@ -784,36 +745,6 @@ export interface BlockDelegate<ExtArgs extends runtime.Types.Extensions.Internal
    * 
    */
   updateMany<T extends BlockUpdateManyArgs>(args: Prisma.SelectSubset<T, BlockUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
-
-  /**
-   * Update zero or more Blocks and returns the data updated in the database.
-   * @param {BlockUpdateManyAndReturnArgs} args - Arguments to update many Blocks.
-   * @example
-   * // Update many Blocks
-   * const block = await prisma.block.updateManyAndReturn({
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Update zero or more Blocks and only return the `id`
-   * const blockWithIdOnly = await prisma.block.updateManyAndReturn({
-   *   select: { id: true },
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  updateManyAndReturn<T extends BlockUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, BlockUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BlockPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one Block.
@@ -1243,28 +1174,7 @@ export type BlockCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * The data used to create many Blocks.
    */
   data: Prisma.BlockCreateManyInput | Prisma.BlockCreateManyInput[]
-}
-
-/**
- * Block createManyAndReturn
- */
-export type BlockCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Block
-   */
-  select?: Prisma.BlockSelectCreateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the Block
-   */
-  omit?: Prisma.BlockOmit<ExtArgs> | null
-  /**
-   * The data used to create many Blocks.
-   */
-  data: Prisma.BlockCreateManyInput | Prisma.BlockCreateManyInput[]
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.BlockIncludeCreateManyAndReturn<ExtArgs> | null
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1309,36 +1219,6 @@ export type BlockUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Limit how many Blocks to update.
    */
   limit?: number
-}
-
-/**
- * Block updateManyAndReturn
- */
-export type BlockUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Block
-   */
-  select?: Prisma.BlockSelectUpdateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the Block
-   */
-  omit?: Prisma.BlockOmit<ExtArgs> | null
-  /**
-   * The data used to update Blocks.
-   */
-  data: Prisma.XOR<Prisma.BlockUpdateManyMutationInput, Prisma.BlockUncheckedUpdateManyInput>
-  /**
-   * Filter which Blocks to update
-   */
-  where?: Prisma.BlockWhereInput
-  /**
-   * Limit how many Blocks to update.
-   */
-  limit?: number
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.BlockIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

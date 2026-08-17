@@ -74,6 +74,9 @@ export type ModelName = (typeof ModelName)[keyof typeof ModelName]
  */
 
 export const TransactionIsolationLevel = runtime.makeStrictEnum({
+  ReadUncommitted: 'ReadUncommitted',
+  ReadCommitted: 'ReadCommitted',
+  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 } as const)
 
@@ -289,4 +292,165 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const UserOrderByRelevanceFieldEnum = {
+  id: 'id',
+  username: 'username',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  avatar: 'avatar',
+  bio: 'bio',
+  activeRole: 'activeRole',
+  preferredIntent: 'preferredIntent',
+  preferredSocialGroup: 'preferredSocialGroup',
+  mood: 'mood',
+  status: 'status'
+} as const
+
+export type UserOrderByRelevanceFieldEnum = (typeof UserOrderByRelevanceFieldEnum)[keyof typeof UserOrderByRelevanceFieldEnum]
+
+
+export const InterestOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name'
+} as const
+
+export type InterestOrderByRelevanceFieldEnum = (typeof InterestOrderByRelevanceFieldEnum)[keyof typeof InterestOrderByRelevanceFieldEnum]
+
+
+export const UserInterestOrderByRelevanceFieldEnum = {
+  userId: 'userId',
+  interestId: 'interestId'
+} as const
+
+export type UserInterestOrderByRelevanceFieldEnum = (typeof UserInterestOrderByRelevanceFieldEnum)[keyof typeof UserInterestOrderByRelevanceFieldEnum]
+
+
+export const ConversationSessionOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userOneId: 'userOneId',
+  userTwoId: 'userTwoId',
+  roleOne: 'roleOne',
+  roleTwo: 'roleTwo',
+  intent: 'intent',
+  socialGroup: 'socialGroup',
+  topic: 'topic',
+  mood: 'mood',
+  problemSummary: 'problemSummary',
+  status: 'status'
+} as const
+
+export type ConversationSessionOrderByRelevanceFieldEnum = (typeof ConversationSessionOrderByRelevanceFieldEnum)[keyof typeof ConversationSessionOrderByRelevanceFieldEnum]
+
+
+export const MessageOrderByRelevanceFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  userId: 'userId',
+  content: 'content',
+  type: 'type'
+} as const
+
+export type MessageOrderByRelevanceFieldEnum = (typeof MessageOrderByRelevanceFieldEnum)[keyof typeof MessageOrderByRelevanceFieldEnum]
+
+
+export const RatingOrderByRelevanceFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  fromUserId: 'fromUserId',
+  toUserId: 'toUserId',
+  badges: 'badges',
+  comment: 'comment'
+} as const
+
+export type RatingOrderByRelevanceFieldEnum = (typeof RatingOrderByRelevanceFieldEnum)[keyof typeof RatingOrderByRelevanceFieldEnum]
+
+
+export const FriendshipOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userOneId: 'userOneId',
+  userTwoId: 'userTwoId'
+} as const
+
+export type FriendshipOrderByRelevanceFieldEnum = (typeof FriendshipOrderByRelevanceFieldEnum)[keyof typeof FriendshipOrderByRelevanceFieldEnum]
+
+
+export const FriendMessageOrderByRelevanceFieldEnum = {
+  id: 'id',
+  friendshipId: 'friendshipId',
+  senderId: 'senderId',
+  content: 'content'
+} as const
+
+export type FriendMessageOrderByRelevanceFieldEnum = (typeof FriendMessageOrderByRelevanceFieldEnum)[keyof typeof FriendMessageOrderByRelevanceFieldEnum]
+
+
+export const BlockOrderByRelevanceFieldEnum = {
+  id: 'id',
+  blockerId: 'blockerId',
+  blockedId: 'blockedId'
+} as const
+
+export type BlockOrderByRelevanceFieldEnum = (typeof BlockOrderByRelevanceFieldEnum)[keyof typeof BlockOrderByRelevanceFieldEnum]
+
+
+export const ReportOrderByRelevanceFieldEnum = {
+  id: 'id',
+  reporterId: 'reporterId',
+  reportedUserId: 'reportedUserId',
+  reason: 'reason',
+  description: 'description',
+  status: 'status'
+} as const
+
+export type ReportOrderByRelevanceFieldEnum = (typeof ReportOrderByRelevanceFieldEnum)[keyof typeof ReportOrderByRelevanceFieldEnum]
+
+
+export const MatchQueueOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  role: 'role',
+  intent: 'intent',
+  socialGroup: 'socialGroup',
+  mood: 'mood',
+  problemSummary: 'problemSummary'
+} as const
+
+export type MatchQueueOrderByRelevanceFieldEnum = (typeof MatchQueueOrderByRelevanceFieldEnum)[keyof typeof MatchQueueOrderByRelevanceFieldEnum]
+
+
+export const VentPostOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  anonymousName: 'anonymousName',
+  avatar: 'avatar',
+  content: 'content',
+  category: 'category',
+  mood: 'mood'
+} as const
+
+export type VentPostOrderByRelevanceFieldEnum = (typeof VentPostOrderByRelevanceFieldEnum)[keyof typeof VentPostOrderByRelevanceFieldEnum]
+
+
+export const DailyQuestionOrderByRelevanceFieldEnum = {
+  id: 'id',
+  question: 'question',
+  category: 'category',
+  date: 'date'
+} as const
+
+export type DailyQuestionOrderByRelevanceFieldEnum = (typeof DailyQuestionOrderByRelevanceFieldEnum)[keyof typeof DailyQuestionOrderByRelevanceFieldEnum]
+
+
+export const DailyAnswerOrderByRelevanceFieldEnum = {
+  id: 'id',
+  questionId: 'questionId',
+  userId: 'userId',
+  anonymousName: 'anonymousName',
+  avatar: 'avatar',
+  answer: 'answer'
+} as const
+
+export type DailyAnswerOrderByRelevanceFieldEnum = (typeof DailyAnswerOrderByRelevanceFieldEnum)[keyof typeof DailyAnswerOrderByRelevanceFieldEnum]
 

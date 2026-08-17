@@ -174,6 +174,7 @@ export type InterestOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   users?: Prisma.UserInterestOrderByRelationAggregateInput
+  _relevance?: Prisma.InterestOrderByRelevanceInput
 }
 
 export type InterestWhereUniqueInput = Prisma.AtLeast<{
@@ -248,6 +249,12 @@ export type InterestUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type InterestOrderByRelevanceInput = {
+  fields: Prisma.InterestOrderByRelevanceFieldEnum | Prisma.InterestOrderByRelevanceFieldEnum[]
+  sort: Prisma.SortOrder
+  search: string
 }
 
 export type InterestCountOrderByAggregateInput = {
@@ -366,17 +373,7 @@ export type InterestSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   _count?: boolean | Prisma.InterestCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["interest"]>
 
-export type InterestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  name?: boolean
-  createdAt?: boolean
-}, ExtArgs["result"]["interest"]>
 
-export type InterestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
-  id?: boolean
-  name?: boolean
-  createdAt?: boolean
-}, ExtArgs["result"]["interest"]>
 
 export type InterestSelectScalar = {
   id?: boolean
@@ -389,8 +386,6 @@ export type InterestInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   users?: boolean | Prisma.Interest$usersArgs<ExtArgs>
   _count?: boolean | Prisma.InterestCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type InterestIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type InterestIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
 
 export type $InterestPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Interest"
@@ -519,30 +514,6 @@ export interface InterestDelegate<ExtArgs extends runtime.Types.Extensions.Inter
   createMany<T extends InterestCreateManyArgs>(args?: Prisma.SelectSubset<T, InterestCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
 
   /**
-   * Create many Interests and returns the data saved in the database.
-   * @param {InterestCreateManyAndReturnArgs} args - Arguments to create many Interests.
-   * @example
-   * // Create many Interests
-   * const interest = await prisma.interest.createManyAndReturn({
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Create many Interests and only return the `id`
-   * const interestWithIdOnly = await prisma.interest.createManyAndReturn({
-   *   select: { id: true },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  createManyAndReturn<T extends InterestCreateManyAndReturnArgs>(args?: Prisma.SelectSubset<T, InterestCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterestPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-  /**
    * Delete a Interest.
    * @param {InterestDeleteArgs} args - Arguments to delete one Interest.
    * @example
@@ -605,36 +576,6 @@ export interface InterestDelegate<ExtArgs extends runtime.Types.Extensions.Inter
    * 
    */
   updateMany<T extends InterestUpdateManyArgs>(args: Prisma.SelectSubset<T, InterestUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<Prisma.BatchPayload>
-
-  /**
-   * Update zero or more Interests and returns the data updated in the database.
-   * @param {InterestUpdateManyAndReturnArgs} args - Arguments to update many Interests.
-   * @example
-   * // Update many Interests
-   * const interest = await prisma.interest.updateManyAndReturn({
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * 
-   * // Update zero or more Interests and only return the `id`
-   * const interestWithIdOnly = await prisma.interest.updateManyAndReturn({
-   *   select: { id: true },
-   *   where: {
-   *     // ... provide filter here
-   *   },
-   *   data: [
-   *     // ... provide data here
-   *   ]
-   * })
-   * Note, that providing `undefined` is treated as the value not being there.
-   * Read more here: https://pris.ly/d/null-undefined
-   * 
-   */
-  updateManyAndReturn<T extends InterestUpdateManyAndReturnArgs>(args: Prisma.SelectSubset<T, InterestUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterestPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
   /**
    * Create or update one Interest.
@@ -1062,24 +1003,7 @@ export type InterestCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * The data used to create many Interests.
    */
   data: Prisma.InterestCreateManyInput | Prisma.InterestCreateManyInput[]
-}
-
-/**
- * Interest createManyAndReturn
- */
-export type InterestCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Interest
-   */
-  select?: Prisma.InterestSelectCreateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the Interest
-   */
-  omit?: Prisma.InterestOmit<ExtArgs> | null
-  /**
-   * The data used to create many Interests.
-   */
-  data: Prisma.InterestCreateManyInput | Prisma.InterestCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1112,32 +1036,6 @@ export type InterestUpdateArgs<ExtArgs extends runtime.Types.Extensions.Internal
  * Interest updateMany
  */
 export type InterestUpdateManyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * The data used to update Interests.
-   */
-  data: Prisma.XOR<Prisma.InterestUpdateManyMutationInput, Prisma.InterestUncheckedUpdateManyInput>
-  /**
-   * Filter which Interests to update
-   */
-  where?: Prisma.InterestWhereInput
-  /**
-   * Limit how many Interests to update.
-   */
-  limit?: number
-}
-
-/**
- * Interest updateManyAndReturn
- */
-export type InterestUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Interest
-   */
-  select?: Prisma.InterestSelectUpdateManyAndReturn<ExtArgs> | null
-  /**
-   * Omit specific fields from the Interest
-   */
-  omit?: Prisma.InterestOmit<ExtArgs> | null
   /**
    * The data used to update Interests.
    */

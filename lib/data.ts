@@ -5,7 +5,7 @@ export interface SocialGroup {
   tagline: string;
   description: string;
   color: string;
-  bgGradient: string;
+  badgeBg: string;
 }
 
 export interface IntentZone {
@@ -34,17 +34,17 @@ export const SOCIAL_GROUPS: SocialGroup[] = [
     emoji: "🌟",
     tagline: "Universal & Welcoming",
     description: "Connect with anyone across the globe on life, thoughts, and shared experiences.",
-    color: "text-amber-400",
-    bgGradient: "from-amber-500/10 to-yellow-500/10 border-amber-500/30",
+    color: "text-[#d4ff33]",
+    badgeBg: "bg-[#d4ff33]/15 text-[#d4ff33] border-[#d4ff33]/30",
   },
   {
     id: "BOYS",
     name: "Boys' Circle",
     emoji: "🛡️",
-    tagline: "Brotherhood & Honest Talk",
+    tagline: "Brotherhood & Real Talk",
     description: "A judgment-free space for guys to discuss career pressure, fitness, heartbreaks, and mental health.",
-    color: "text-blue-400",
-    bgGradient: "from-blue-500/10 to-cyan-500/10 border-blue-500/30",
+    color: "text-indigo-400",
+    badgeBg: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
   },
   {
     id: "GIRLS",
@@ -53,7 +53,7 @@ export const SOCIAL_GROUPS: SocialGroup[] = [
     tagline: "Sisterhood & Safe Space",
     description: "A respectful, supportive space for girls to share life, relationship advice, career, and mutual support.",
     color: "text-pink-400",
-    bgGradient: "from-pink-500/10 to-rose-500/10 border-pink-500/30",
+    badgeBg: "bg-pink-500/15 text-pink-300 border-pink-500/30",
   },
   {
     id: "STUDENTS",
@@ -62,7 +62,7 @@ export const SOCIAL_GROUPS: SocialGroup[] = [
     tagline: "College, Roadmaps & Growth",
     description: "For college students and freshers navigating exams, career roadmaps, job hunt, and early 20s struggles.",
     color: "text-emerald-400",
-    bgGradient: "from-emerald-500/10 to-teal-500/10 border-emerald-500/30",
+    badgeBg: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   },
   {
     id: "NIGHT_OWLS",
@@ -71,7 +71,7 @@ export const SOCIAL_GROUPS: SocialGroup[] = [
     tagline: "11 PM - 4 AM Deep Conversations",
     description: "For the midnight thinkers, insomniacs, and quiet souls seeking meaningful night-time talks.",
     color: "text-purple-400",
-    bgGradient: "from-purple-500/10 to-indigo-500/10 border-purple-500/30",
+    badgeBg: "bg-purple-500/15 text-purple-300 border-purple-500/30",
   },
   {
     id: "TECH",
@@ -79,8 +79,8 @@ export const SOCIAL_GROUPS: SocialGroup[] = [
     emoji: "💻",
     tagline: "Coders, Designers & Founders",
     description: "Share coding struggles, startup ideas, portfolio feedback, or find a project companion.",
-    color: "text-sky-400",
-    bgGradient: "from-sky-500/10 to-blue-500/10 border-sky-500/30",
+    color: "text-cyan-400",
+    badgeBg: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
   },
 ];
 
@@ -101,7 +101,7 @@ export const INTENT_ZONES: IntentZone[] = [
     emoji: "🧭",
     tagline: "Advice, Solutions & Growth",
     badge: "Constructive & Goal-Driven",
-    color: "text-amber-400",
+    color: "text-[#d4ff33]",
     allowedFlirting: false,
     description: "Get or give actionable advice on career, studies, coding roadmaps, and major life decisions.",
   },
@@ -111,7 +111,7 @@ export const INTENT_ZONES: IntentZone[] = [
     emoji: "☕",
     tagline: "Friendly Banter & Chill Chat",
     badge: "Platonic Friendship",
-    color: "text-emerald-400",
+    color: "text-purple-400",
     allowedFlirting: false,
     description: "When you are bored and want a fun, wholesome conversation about movies, music, hobbies, or life.",
   },
