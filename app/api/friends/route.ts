@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { ensureDbTables } from "@/lib/db-init";
 
 export async function GET() {
   try {
+    await ensureDbTables();
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,10 +46,12 @@ export async function GET() {
     });
 
     const friends = friendships.map((f) => {
-      const friend = f.userOneId === user.id ? f.userTwo : f.userOne;
+      const partner = f.userOneId === user.id ? f.userTwo : f.userOne;
       return {
+        id: f.id,
         friendshipId: f.id,
-        friend,
+        partner: partner,
+        friend: partner,
         createdAt: f.createdAt,
         lastMessage: f.messages[0] || null,
       };

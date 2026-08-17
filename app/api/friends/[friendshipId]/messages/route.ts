@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { ensureDbTables } from "@/lib/db-init";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ friendshipId: string }> }
 ) {
   try {
+    await ensureDbTables();
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,6 +47,8 @@ export async function POST(
   { params }: { params: Promise<{ friendshipId: string }> }
 ) {
   try {
+    await ensureDbTables();
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

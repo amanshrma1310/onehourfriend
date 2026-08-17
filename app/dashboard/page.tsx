@@ -64,6 +64,9 @@ export default function Dashboard() {
   // Search Filter
   const [searchQuery, setSearchQuery] = useState("");
 
+  const matchIntervalRef = useRef<any>(null);
+  const friendPollIntervalRef = useRef<any>(null);
+
   // Online Active Avatars Strip (From Image)
   const ONLINE_ACTIVE_PEOPLE = [
     { name: "Alex", avatar: "👨‍💻", intent: "GUIDANCE", mood: "Tech Roadmaps" },
@@ -80,7 +83,30 @@ export default function Dashboard() {
     loadFriends();
     loadVentWall();
     loadDailyQuestion();
+
+    return () => {
+      if (matchIntervalRef.current) clearInterval(matchIntervalRef.current);
+      if (friendPollIntervalRef.current) clearInterval(friendPollIntervalRef.current);
+    };
   }, []);
+
+  // Poll friend direct messages in real time when active
+  useEffect(() => {
+    if (friendPollIntervalRef.current) clearInterval(friendPollIntervalRef.current);
+
+    if (activeTab === "friends" && activeFriendship) {
+      const friendshipId = activeFriendship.id || activeFriendship.friendshipId;
+      if (friendshipId) {
+        friendPollIntervalRef.current = setInterval(() => {
+          loadFriendChat(friendshipId, true);
+        }, 2000);
+      }
+    }
+
+    return () => {
+      if (friendPollIntervalRef.current) clearInterval(friendPollIntervalRef.current);
+    };
+  }, [activeTab, activeFriendship]);
 
   async function loadUserData() {
     try {
@@ -108,8 +134,9 @@ export default function Dashboard() {
       if (data.friends) {
         setFriends(data.friends);
         if (data.friends.length > 0 && !activeFriendship) {
-          setActiveFriendship(data.friends[0]);
-          loadFriendChat(data.friends[0].id);
+          const first = data.friends[0];
+          setActiveFriendship(first);
+          loadFriendChat(first.id || first.friendshipId);
         }
       }
     } catch (e) {
@@ -117,13 +144,16 @@ export default function Dashboard() {
     }
   }
 
-  async function loadFriendChat(friendshipId: string) {
+  async function loadFriendChat(friendshipId: string, isSilent = false) {
+    if (!friendshipId) return;
     try {
       const res = await fetch(`/api/friends/${friendshipId}/messages`);
       const data = await res.json();
-      if (data.messages) setFriendMessages(data.messages);
+      if (data.messages) {
+        setFriendMessages(data.messages);
+      }
     } catch (e) {
-      console.error(e);
+      if (!isSilent) console.error(e);
     }
   }
 
@@ -147,8 +177,6 @@ export default function Dashboard() {
       console.error(e);
     }
   }
-
-  const matchIntervalRef = useRef<any>(null);
 
   async function handleStartMatchmaking(fallbackToCompanion: boolean = false, customIntent?: string, customMood?: string) {
     if (matchIntervalRef.current) clearInterval(matchIntervalRef.current);
@@ -207,18 +235,21 @@ export default function Dashboard() {
 
   async function handleSendFriendMessage(e: React.FormEvent) {
     e.preventDefault();
-    if (!newFriendMessage.trim() || !activeFriendship) return;
+    const friendshipId = activeFriendship?.id || activeFriendship?.friendshipId;
+    if (!newFriendMessage.trim() || !friendshipId) return;
+
+    const messageText = newFriendMessage.trim();
+    setNewFriendMessage("");
 
     try {
-      const res = await fetch(`/api/friends/${activeFriendship.id}/messages`, {
+      const res = await fetch(`/api/friends/${friendshipId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newFriendMessage.trim() }),
+        body: JSON.stringify({ content: messageText }),
       });
       const data = await res.json();
       if (data.message) {
         setFriendMessages((prev) => [...prev, data.message]);
-        setNewFriendMessage("");
       }
     } catch (e) {
       console.error(e);
@@ -298,6 +329,8 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const activeFriendUser = activeFriendship?.partner || activeFriendship?.friend;
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-[#121218] text-white overflow-hidden selection:bg-[#872bf5] selection:text-white relative">
@@ -507,39 +540,47 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            friends.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => {
-                  setActiveFriendship(f);
-                  setActiveTab("friends");
-                  loadFriendChat(f.id);
-                }}
-                className={`w-full p-3 rounded-2xl transition flex items-center justify-between text-left border ${
-                  activeFriendship?.id === f.id
-                    ? "bg-purple-50 border-purple-200 text-black shadow-sm"
-                    : "bg-white hover:bg-zinc-50 border-transparent text-black"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <span className="text-2xl">{f.partner?.avatar || "✨"}</span>
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-1 ring-white" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-black text-black">{f.partner?.username}</div>
-                    <div className="text-[11px] text-zinc-500 line-clamp-1 font-medium">
-                      {f.lastMessage?.content || "Connected Friend"}
+            friends.map((f) => {
+              const friendUser = f.partner || f.friend;
+              const fId = f.id || f.friendshipId;
+              const isSelected = activeFriendship?.id === fId || activeFriendship?.friendshipId === fId;
+
+              return (
+                <button
+                  key={fId}
+                  onClick={() => {
+                    setActiveFriendship(f);
+                    setActiveTab("friends");
+                    loadFriendChat(fId);
+                  }}
+                  className={`w-full p-3 rounded-2xl transition flex items-center justify-between text-left border ${
+                    isSelected
+                      ? "bg-purple-50 border-purple-200 text-black shadow-sm"
+                      : "bg-white hover:bg-zinc-50 border-transparent text-black"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <span className="text-2xl">{friendUser?.avatar || "✨"}</span>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-1 ring-white" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-black">
+                        {friendUser?.username || "Connected Friend"}
+                      </div>
+                      <div className="text-[11px] text-zinc-500 line-clamp-1 font-medium">
+                        {f.lastMessage?.content || "Permanent Friend"}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="text-right">
-                  <span className="text-[10px] text-zinc-400 font-semibold block">12:25 PM</span>
-                  <CheckCheck className="w-3.5 h-3.5 text-[#872bf5] ml-auto mt-0.5" />
-                </div>
-              </button>
-            ))
+                  <div className="text-right">
+                    <span className="text-[10px] text-zinc-400 font-semibold block">Active</span>
+                    <CheckCheck className="w-3.5 h-3.5 text-[#872bf5] ml-auto mt-0.5" />
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
       </aside>
@@ -553,9 +594,8 @@ export default function Dashboard() {
         {/* TAB 1: Chat Home & Instant Excitement Hero */}
         {activeTab === "chat_home" && (
           <div className="p-6 md:p-10 max-w-5xl mx-auto w-full space-y-8 relative z-10">
-            {/* VIBRANT PURPLE HERO BANNER (With Shimmer & Concentric Animation) */}
+            {/* VIBRANT PURPLE HERO BANNER */}
             <div className="relative rounded-[32px] p-8 md:p-10 bg-[#872bf5] bg-[radial-gradient(circle_at_center,#9a46fc_0%,#872bf5_50%,#7016db_100%)] shadow-2xl shadow-[#872bf5]/40 overflow-hidden text-white group">
-              {/* Shimmer sweep effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent animate-shimmer pointer-events-none" />
 
               <div className="relative z-10 max-w-xl space-y-3.5">
@@ -614,10 +654,10 @@ export default function Dashboard() {
                   },
                   {
                     title: "🧗 Stuck in Career / Tech",
-                    desc: "Talk with a guider for roadmaps and advice",
+                    desc: "Talk with someone for roadmaps and advice",
                     intent: "GUIDANCE",
                     mood: "Coding / Tech Roadmaps",
-                    btnText: "Get Mentored →",
+                    btnText: "Talk Guidance →",
                   },
                   {
                     title: "🌙 Late Night Deep Talks",
@@ -761,11 +801,17 @@ export default function Dashboard() {
           <div className="flex-1 flex flex-col h-full relative z-10">
             {activeFriendship ? (
               <div className="flex-1 flex flex-col h-full">
+                {/* DM Header with Friend's Exact Name and Avatar */}
                 <div className="p-4 border-b border-white/10 bg-[#181824] flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">{activeFriendship.partner?.avatar || "✨"}</span>
+                    <div className="relative">
+                      <span className="text-3xl">{activeFriendUser?.avatar || "✨"}</span>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-2 ring-[#181824]" />
+                    </div>
                     <div>
-                      <div className="text-xs font-bold text-white">{activeFriendship.partner?.username}</div>
+                      <div className="text-sm font-black text-white">
+                        {activeFriendUser?.username || "Connected Friend"}
+                      </div>
                       <div className="text-[10px] text-[#00e676] flex items-center gap-1 font-semibold">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#00e676]" />
                         <span>Connected Friend (Kept after 60-min chat)</span>
@@ -783,10 +829,11 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Message Feed */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
                   {friendMessages.length === 0 ? (
                     <div className="text-center py-12 text-xs text-zinc-500">
-                      Say hi to your permanent friend! You both chose to stay connected.
+                      Say hi to <strong>{activeFriendUser?.username || "your friend"}</strong>! You both chose to stay connected.
                     </div>
                   ) : (
                     friendMessages.map((m) => {
@@ -796,7 +843,7 @@ export default function Dashboard() {
                           key={m.id}
                           className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
                         >
-                          {!isMe && <span className="text-lg">{activeFriendship.partner?.avatar || "✨"}</span>}
+                          {!isMe && <span className="text-lg">{activeFriendUser?.avatar || "✨"}</span>}
                           <div
                             className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
                               isMe
@@ -815,17 +862,19 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <form onSubmit={handleSendFriendMessage} className="p-4 border-t border-white/10 bg-[#181824] flex items-center gap-3">
+                {/* Direct Message Input Form (Fully Clickable & Never Blocked) */}
+                <form onSubmit={handleSendFriendMessage} className="p-4 border-t border-white/10 bg-[#181824] flex items-center gap-3 relative z-30">
                   <input
                     type="text"
-                    placeholder="Type a message to your friend..."
+                    placeholder={`Message ${activeFriendUser?.username || "friend"}...`}
                     value={newFriendMessage}
                     onChange={(e) => setNewFriendMessage(e.target.value)}
                     className="flex-1 bg-[#121218] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#872bf5]"
                   />
                   <button
                     type="submit"
-                    className="bg-[#872bf5] text-white font-extrabold px-6 py-3 rounded-2xl text-xs hover:bg-[#7417e3] transition flex items-center gap-1.5 shadow-lg shadow-[#872bf5]/30 hover:scale-105 active:scale-95"
+                    disabled={!newFriendMessage.trim()}
+                    className="bg-[#872bf5] text-white font-extrabold px-6 py-3 rounded-2xl text-xs hover:bg-[#7417e3] transition flex items-center gap-1.5 shadow-lg shadow-[#872bf5]/30 hover:scale-105 active:scale-95 disabled:opacity-40"
                   >
                     <span>Send</span>
                     <Send className="w-3.5 h-3.5" />
@@ -961,14 +1010,16 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* FLOATING ACTION BUTTON */}
-        <button
-          onClick={() => setShowCategoryModal(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#872bf5] hover:bg-[#7417e3] text-white flex items-center justify-center shadow-2xl shadow-[#872bf5]/60 hover:scale-110 active:scale-95 transition z-40"
-          title="Instant 1-Click Match"
-        >
-          <Plus className="w-7 h-7" />
-        </button>
+        {/* FLOATING ACTION BUTTON (Only shown on Chat Home so it never covers Direct Message send button) */}
+        {activeTab === "chat_home" && (
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#872bf5] hover:bg-[#7417e3] text-white flex items-center justify-center shadow-2xl shadow-[#872bf5]/60 hover:scale-110 active:scale-95 transition z-40"
+            title="Instant 1-Click Match"
+          >
+            <Plus className="w-7 h-7" />
+          </button>
+        )}
       </main>
 
       {/* CATEGORY & MOOD PICKER MODAL */}
