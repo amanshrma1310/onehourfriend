@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, getClientIp, isBotHoneypotTriggered, sanitizeText } from "@/lib/security";
+import { ensureDbTables } from "@/lib/db-init";
 
 export async function POST(req: Request) {
   try {
+    await ensureDbTables();
+
     const ip = getClientIp(req);
 
     // 1. Anti-Bot Rate Limiting (max 5 signups per IP per 5 minutes)
@@ -20,7 +23,6 @@ export async function POST(req: Request) {
 
     // 2. Invisible Honeypot Trap Check (Blocks automated spam bots)
     if (isBotHoneypotTriggered(body)) {
-      // Silently pretend success or return generic error to fool scrapers
       return NextResponse.json({ error: "Invalid registration submission" }, { status: 400 });
     }
 

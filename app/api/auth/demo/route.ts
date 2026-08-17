@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { setSessionCookie } from "@/lib/auth";
 import { DEMO_USERS } from "@/lib/data";
+import { ensureDbTables } from "@/lib/db-init";
 
 export async function POST(req: Request) {
   try {
+    await ensureDbTables();
+
     const { index = 0 } = await req.json();
     const demoData = DEMO_USERS[index % DEMO_USERS.length];
 

@@ -1,7 +1,10 @@
 import { getSessionCookie } from "./auth";
 import { prisma } from "./prisma";
+import { ensureDbTables } from "./db-init";
 
 export async function getCurrentUser() {
+  await ensureDbTables();
+
   const session = await getSessionCookie();
   if (!session || !session.userId) {
     return null;

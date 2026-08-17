@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, getClientIp, isBotHoneypotTriggered, sanitizeText } from "@/lib/security";
+import { ensureDbTables } from "@/lib/db-init";
 
 export async function POST(req: Request) {
   try {
+    await ensureDbTables();
+
     const ip = getClientIp(req);
 
     // 1. Anti-Brute Force Rate Limiting (max 10 login attempts per IP per minute)
