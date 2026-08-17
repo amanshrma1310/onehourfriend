@@ -323,16 +323,14 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-white">{partner?.username || "Alex"}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#872bf5]/25 text-purple-300">
-                    {session?.partnerRole === "GUIDER" ? "🧭 Guider" : "👤 Seeker"}
+                  <span className="text-sm font-black text-white">{partner?.username || "Friend"}</span>
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#872bf5]/25 text-purple-200">
+                    {currentZone.emoji} {currentZone.name}
                   </span>
                 </div>
                 <div className="text-[11px] text-[#00e676] font-semibold flex items-center gap-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#00e676]" />
-                  <span>Active</span>
-                  <span className="text-zinc-500">•</span>
-                  <span className="text-zinc-400">{currentZone.name}</span>
+                  <span>Active Now</span>
                 </div>
               </div>
             </div>
@@ -504,7 +502,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
           <div>
             <h3 className="text-base font-black text-white">{partner?.username}</h3>
             <div className="text-xs text-purple-300 font-medium">
-              {session?.partnerRole === "GUIDER" ? "🧭 Guider" : "👤 Seeker"} • {currentZone.name}
+              {currentZone.emoji} {currentZone.name}
             </div>
           </div>
 

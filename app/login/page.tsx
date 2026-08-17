@@ -187,8 +187,8 @@ export default function Login() {
                     <div className="text-xs font-bold text-white group-hover:text-purple-300 transition">
                       {demo.username}
                     </div>
-                    <div className="text-[10px] text-zinc-400">
-                      {demo.role === "PROBLEM_FACER" ? "👤 Seeker" : demo.role === "GUIDER" ? "🧭 Guider" : "☕ Casual"} • {demo.intent} Zone
+                    <div className="text-[10px] text-purple-300 font-medium">
+                      {demo.intent} Room • {demo.mood}
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { INTENT_ZONES, SOCIAL_GROUPS, MOODS } from "@/lib/data";
@@ -39,7 +39,6 @@ export default function Dashboard() {
   const [selectedIntent, setSelectedIntent] = useState("PEACE");
   const [selectedMood, setSelectedMood] = useState("Stressed & Overwhelmed");
   const [selectedSocialGroup, setSelectedSocialGroup] = useState("OPEN");
-  const [activeRole, setActiveRole] = useState("PROBLEM_FACER");
 
   // Live Radar Matchmaking State
   const [isMatching, setIsMatching] = useState(false);
@@ -149,11 +148,15 @@ export default function Dashboard() {
     }
   }
 
+  const matchIntervalRef = useRef<any>(null);
+
   async function handleStartMatchmaking(fallbackToCompanion: boolean = false, customIntent?: string, customMood?: string) {
+    if (matchIntervalRef.current) clearInterval(matchIntervalRef.current);
+
     setShowCategoryModal(false);
     setIsMatching(true);
     setMatchSearchSeconds(0);
-    setMatchStatus(fallbackToCompanion ? "Connecting to AI Empathetic Companion..." : "Scanning radar for an active partner...");
+    setMatchStatus(fallbackToCompanion ? "Connecting to AI Empathetic Companion..." : "Scanning radar for an active partner in your category...");
 
     const intentToUse = customIntent || selectedIntent;
     const moodToUse = customMood || selectedMood;
@@ -163,9 +166,8 @@ export default function Dashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          role: activeRole,
           intent: intentToUse,
-          socialGroup: selectedSocialGroup,
+          socialGroup: "OPEN",
           mood: moodToUse,
           fallbackToCompanion,
         }),
@@ -174,21 +176,23 @@ export default function Dashboard() {
       const data = await res.json();
 
       if (data.sessionId) {
+        setIsMatching(false);
         router.push(`/chat/${data.sessionId}`);
         return;
       }
 
-      const interval = setInterval(async () => {
+      matchIntervalRef.current = setInterval(async () => {
         setMatchSearchSeconds((s) => s + 1);
         try {
           const pollRes = await fetch("/api/match/status");
           const pollData = await pollRes.json();
           if (pollData.sessionId) {
-            clearInterval(interval);
+            clearInterval(matchIntervalRef.current);
+            setIsMatching(false);
             router.push(`/chat/${pollData.sessionId}`);
           }
         } catch {}
-      }, 2000);
+      }, 1000);
     } catch (err: any) {
       alert(err.message || "Failed to start matchmaker");
       setIsMatching(false);
@@ -196,6 +200,7 @@ export default function Dashboard() {
   }
 
   async function handleCancelMatch() {
+    if (matchIntervalRef.current) clearInterval(matchIntervalRef.current);
     await fetch("/api/match/cancel", { method: "POST" });
     setIsMatching(false);
   }
@@ -984,32 +989,7 @@ export default function Dashboard() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-300 mb-2">Your Role Today</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: "PROBLEM_FACER", label: "👤 Problem Facer", desc: "Need listening/advice" },
-                  { id: "GUIDER", label: "🧭 Guider", desc: "Offer warm guidance" },
-                  { id: "CASUAL_CHILL", label: "☕ Casual Friend", desc: "Banter & chill" },
-                ].map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setActiveRole(r.id)}
-                    className={`p-3 rounded-2xl border text-left transition ${
-                      activeRole === r.id
-                        ? "bg-[#872bf5]/25 border-[#872bf5] text-white shadow-md shadow-[#872bf5]/20"
-                        : "bg-[#121218] border-white/5 text-zinc-400 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{r.label}</div>
-                    <div className="text-[10px] text-zinc-400 mt-0.5">{r.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-zinc-300 mb-2">Intent Safe Zone</label>
+              <label className="block text-xs font-bold text-zinc-300 mb-2">Choose Room Category</label>
               <div className="grid grid-cols-2 gap-2.5">
                 {INTENT_ZONES.map((zone) => (
                   <button
