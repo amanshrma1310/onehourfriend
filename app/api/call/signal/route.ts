@@ -59,10 +59,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const roomId = url.searchParams.get("roomId");
     const since = url.searchParams.get("since");
-
-    if (!roomId) {
-      return NextResponse.json({ error: "Missing roomId" }, { status: 400 });
-    }
+    const checkIncoming = url.searchParams.get("checkIncoming");
 
     let sinceDate: Date;
     if (since) {
@@ -72,12 +69,45 @@ export async function GET(req: Request) {
       sinceDate = new Date(Date.now() - 30 * 1000);
     }
 
-    const rows: any = await prisma.$queryRawUnsafe(
-      "SELECT `id`, `roomId`, `senderId`, `type`, `payload`, `createdAt` FROM `CallSignal` WHERE `roomId` = ? AND `senderId` != ? AND `createdAt` > ? ORDER BY `createdAt` ASC LIMIT 50",
-      roomId,
-      user.id,
-      sinceDate
-    );
+    let rows: any[] = [];
+
+    if (roomId) {
+      rows = await prisma.$queryRawUnsafe(
+        "SELECT `id`, `roomId`, `senderId`, `type`, `payload`, `createdAt` FROM `CallSignal` WHERE `roomId` = ? AND `senderId` != ? AND `createdAt` > ? ORDER BY `createdAt` ASC LIMIT 50",
+        roomId,
+        user.id,
+        sinceDate
+      );
+    } else if (checkIncoming === "true") {
+      // Find all friendships for this user
+      const friendships = await prisma.friendship.findMany({
+        where: {
+          OR: [{ userOneId: user.id }, { userTwoId: user.id }],
+        },
+        select: { id: true },
+      });
+
+      const roomIds = friendships.map((f) => `friendship_${f.id}`);
+
+      // Also check active session if any
+      const activeSession = await prisma.conversationSession.findFirst({
+        where: {
+          OR: [{ userOneId: user.id }, { userTwoId: user.id }],
+          status: "ACTIVE",
+        },
+        select: { id: true },
+      });
+
+      if (activeSession) {
+        roomIds.push(`session_${activeSession.id}`);
+      }
+
+      if (roomIds.length > 0) {
+        const placeholders = roomIds.map(() => "?").join(",");
+        const query = `SELECT \`id\`, \`roomId\`, \`senderId\`, \`type\`, \`payload\`, \`createdAt\` FROM \`CallSignal\` WHERE \`roomId\` IN (${placeholders}) AND \`senderId\` != ? AND \`type\` = 'CALL_RING' AND \`createdAt\` > ? ORDER BY \`createdAt\` DESC LIMIT 10`;
+        rows = await prisma.$queryRawUnsafe(query, ...roomIds, user.id, sinceDate);
+      }
+    }
 
     const signals = (rows || []).map((row: any) => {
       let parsedPayload = {};

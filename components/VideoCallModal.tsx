@@ -7,17 +7,15 @@ import {
   Video as VideoIcon,
   VideoOff,
   PhoneOff,
-  PhoneCall,
-  Maximize2,
-  Minimize2,
-  Sparkles,
   ShieldCheck,
-  SwitchCamera,
+  Volume2,
 } from "lucide-react";
 
 interface VideoCallModalProps {
   roomId: string;
   currentUserId: string;
+  currentUserName?: string;
+  currentUserAvatar?: string;
   partnerName: string;
   partnerAvatar: string;
   isVideoCall?: boolean;
@@ -36,13 +34,15 @@ const ICE_SERVERS: RTCConfiguration = {
 export default function VideoCallModal({
   roomId,
   currentUserId,
+  currentUserName = "Friend",
+  currentUserAvatar = "🌙",
   partnerName,
   partnerAvatar,
   isVideoCall = true,
   isInitiator = true,
   onClose,
 }: VideoCallModalProps) {
-  const [callState, setCallState] = useState<"CALLING" | "RINGING" | "CONNECTED" | "ENDED">("CALLING");
+  const [callState, setCallState] = useState<"CALLING" | "CONNECTING" | "CONNECTED" | "ENDED">("CALLING");
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(!isVideoCall);
   const [callDuration, setCallDuration] = useState(0);
@@ -53,10 +53,11 @@ export default function VideoCallModal({
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const pollIntervalRef = useRef<any>(null);
-  const lastSignalTimeRef = useRef<number>(Date.now() - 5000);
+  const ringIntervalRef = useRef<any>(null);
+  const lastSignalTimeRef = useRef<number>(Date.now() - 60 * 1000); // look back 60s for offer
   const processedSignalIds = useRef<Set<string>>(new Set());
 
-  // Send a signaling message
+  // Helper: Send a signaling message
   const sendSignal = useCallback(
     async (type: string, payload: any = {}) => {
       try {
@@ -72,7 +73,58 @@ export default function VideoCallModal({
     [roomId]
   );
 
-  // Initialize WebRTC and Local Media
+  // Play pleasant Web Audio chime while calling
+  useEffect(() => {
+    let ctx: AudioContext | null = null;
+    if (callState === "CALLING") {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          ctx = new AudioCtx();
+          const playRing = () => {
+            if (!ctx || ctx.state === "closed") return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(480, ctx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.05, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+          };
+
+          playRing();
+          ringIntervalRef.current = setInterval(playRing, 3000);
+        }
+      } catch {}
+    }
+
+    return () => {
+      if (ringIntervalRef.current) clearInterval(ringIntervalRef.current);
+      if (ctx && ctx.state !== "closed") {
+        try {
+          ctx.close();
+        } catch {}
+      }
+    };
+  }, [callState]);
+
+  // Clean close of tracks and connection
+  const handleCleanClose = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+  }, []);
+
+  // Main Call Initializer
   const initCall = useCallback(async () => {
     try {
       // 1. Get Camera and Microphone access
@@ -90,10 +142,10 @@ export default function VideoCallModal({
       const pc = new RTCPeerConnection(ICE_SERVERS);
       pcRef.current = pc;
 
-      // Add local tracks to peer connection
+      // Add local tracks
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      // Handle incoming remote track
+      // Handle remote incoming track
       pc.ontrack = (event) => {
         if (remoteVideoRef.current && event.streams[0]) {
           remoteVideoRef.current.srcObject = event.streams[0];
@@ -118,13 +170,21 @@ export default function VideoCallModal({
 
       if (isInitiator) {
         setCallState("CALLING");
-        sendSignal("CALL_RING", { isVideo: isVideoCall });
 
+        // Broadcast CALL_RING signal continuously so receiver catches it immediately
+        sendSignal("CALL_RING", {
+          callerName: currentUserName,
+          callerAvatar: currentUserAvatar,
+          isVideo: isVideoCall,
+        });
+
+        // Create WebRTC Offer
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         sendSignal("OFFER", offer);
       } else {
-        setCallState("RINGING");
+        setCallState("CONNECTING");
+        sendSignal("CALL_ACCEPT", { acceptedBy: currentUserId });
       }
     } catch (err: any) {
       console.error("Media error:", err);
@@ -134,9 +194,9 @@ export default function VideoCallModal({
           : "Could not access camera/microphone."
       );
     }
-  }, [isInitiator, isVideoCall, sendSignal]);
+  }, [isInitiator, isVideoCall, currentUserName, currentUserAvatar, currentUserId, sendSignal]);
 
-  // Poll for incoming signals
+  // Signaling Polling Loop
   useEffect(() => {
     initCall();
 
@@ -153,14 +213,19 @@ export default function VideoCallModal({
 
             const pc = pcRef.current;
 
-            if (signal.type === "CALL_RING") {
-              setCallState("RINGING");
+            if (signal.type === "CALL_ACCEPT" && isInitiator && pc) {
+              setCallState("CONNECTING");
+              // Re-send current offer to ensure receiver has it
+              if (pc.localDescription) {
+                sendSignal("OFFER", pc.localDescription);
+              }
             } else if (signal.type === "OFFER" && pc) {
-              await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
-              sendSignal("ANSWER", answer);
-              setCallState("CONNECTED");
+              if (pc.signalingState === "stable" || pc.signalingState === "have-local-offer") {
+                await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                sendSignal("ANSWER", answer);
+              }
             } else if (signal.type === "ANSWER" && pc) {
               if (pc.signalingState === "have-local-offer") {
                 await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
@@ -168,15 +233,18 @@ export default function VideoCallModal({
               }
             } else if (signal.type === "CANDIDATE" && pc) {
               try {
-                await pc.addIceCandidate(new RTCIceCandidate(signal.payload));
+                if (pc.remoteDescription) {
+                  await pc.addIceCandidate(new RTCIceCandidate(signal.payload));
+                }
               } catch (e) {
                 console.error("Candidate add error", e);
               }
-            } else if (signal.type === "HANGUP") {
+            } else if (signal.type === "HANGUP" || signal.type === "CALL_DECLINE") {
               setCallState("ENDED");
               setTimeout(() => {
                 handleCleanClose();
-              }, 1500);
+                onClose();
+              }, 1200);
             }
           }
         }
@@ -189,9 +257,9 @@ export default function VideoCallModal({
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       handleCleanClose();
     };
-  }, [roomId, initCall, sendSignal]);
+  }, [roomId, initCall, isInitiator, sendSignal, handleCleanClose, onClose]);
 
-  // Live Call Duration Timer
+  // Live Timer during active call
   useEffect(() => {
     let timer: any = null;
     if (callState === "CONNECTED") {
@@ -204,19 +272,7 @@ export default function VideoCallModal({
     };
   }, [callState]);
 
-  // Clean close of tracks and peer connection
-  const handleCleanClose = () => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => track.stop());
-      localStreamRef.current = null;
-    }
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-  };
-
-  // Toggle Audio (Mute)
+  // Controls
   const toggleAudio = () => {
     if (localStreamRef.current) {
       const audioTracks = localStreamRef.current.getAudioTracks();
@@ -225,7 +281,6 @@ export default function VideoCallModal({
     }
   };
 
-  // Toggle Video (Camera)
   const toggleVideo = () => {
     if (localStreamRef.current) {
       const videoTracks = localStreamRef.current.getVideoTracks();
@@ -234,14 +289,13 @@ export default function VideoCallModal({
     }
   };
 
-  // Hang up call
   const handleHangup = () => {
     sendSignal("HANGUP");
     setCallState("ENDED");
     handleCleanClose();
     setTimeout(() => {
       onClose();
-    }, 400);
+    }, 300);
   };
 
   const formatTimer = (seconds: number) => {
@@ -267,10 +321,12 @@ export default function VideoCallModal({
               <ShieldCheck className="w-3.5 h-3.5 text-[#00e676]" />
               <span>
                 {callState === "CONNECTED"
-                  ? "Encrypted WebRTC Call"
-                  : callState === "RINGING"
+                  ? "Encrypted HD Call Active"
+                  : callState === "CONNECTING"
+                  ? "Connecting streams..."
+                  : callState === "CALLING"
                   ? "Ringing partner..."
-                  : "Connecting..."}
+                  : "Call Ended"}
               </span>
             </div>
           </div>
@@ -301,7 +357,7 @@ export default function VideoCallModal({
             <div className="relative w-32 h-32 flex items-center justify-center">
               <div className="absolute inset-0 rounded-full border border-[#872bf5]/40 animate-radar-1" />
               <div className="absolute inset-0 rounded-full border border-purple-400/40 animate-radar-2" />
-              <div className="w-20 h-20 rounded-full bg-[#872bf5] flex items-center justify-center text-4xl shadow-2xl shadow-[#872bf5]/60 z-10">
+              <div className="w-20 h-20 rounded-full bg-[#872bf5] flex items-center justify-center text-4xl shadow-2xl shadow-[#872bf5]/60 z-10 animate-bounce">
                 {partnerAvatar}
               </div>
             </div>
@@ -310,12 +366,12 @@ export default function VideoCallModal({
               <h2 className="text-xl md:text-2xl font-black text-white">
                 {callState === "CALLING"
                   ? `Calling ${partnerName}...`
-                  : callState === "RINGING"
-                  ? `Ringing ${partnerName}...`
+                  : callState === "CONNECTING"
+                  ? `Connecting with ${partnerName}...`
                   : "Call Ended"}
               </h2>
               <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-                {errorMessage || "Live peer-to-peer connection is establishing securely."}
+                {errorMessage || "Live peer-to-peer WebRTC connection is securing your call."}
               </p>
             </div>
           </div>

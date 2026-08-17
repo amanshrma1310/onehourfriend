@@ -167,6 +167,8 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
     setActiveCall({
       roomId: `session_${sessionId}`,
       currentUserId: currentUser.id,
+      currentUserName: currentUser.username,
+      currentUserAvatar: currentUser.avatar,
       partnerName: partner.username || "Partner",
       partnerAvatar: partner.avatar || "🌙",
       isVideoCall: isVideo,
@@ -179,6 +181,8 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
     setActiveCall({
       roomId: incomingCall.roomId,
       currentUserId: currentUser.id,
+      currentUserName: currentUser.username,
+      currentUserAvatar: currentUser.avatar,
       partnerName: partner.username || "Partner",
       partnerAvatar: partner.avatar || "🌙",
       isVideoCall: incomingCall.isVideo,
@@ -899,6 +903,8 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         <VideoCallModal
           roomId={activeCall.roomId}
           currentUserId={activeCall.currentUserId}
+          currentUserName={activeCall.currentUserName}
+          currentUserAvatar={activeCall.currentUserAvatar}
           partnerName={activeCall.partnerName}
           partnerAvatar={activeCall.partnerAvatar}
           isVideoCall={activeCall.isVideoCall}

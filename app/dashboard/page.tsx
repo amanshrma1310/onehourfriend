@@ -96,6 +96,76 @@ export default function Dashboard() {
     };
   }, []);
 
+  // Global Incoming Call Listener across all tabs and rooms
+  useEffect(() => {
+    if (!currentUser || activeCall) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/call/signal?checkIncoming=true&since=${lastSignalCheckRef.current}`);
+        const data = await res.json();
+        if (data.signals && data.signals.length > 0) {
+          for (const s of data.signals) {
+            lastSignalCheckRef.current = new Date(s.createdAt).getTime();
+            if (s.type === "CALL_RING") {
+              setIncomingCall({
+                roomId: s.roomId,
+                partnerName: s.payload?.callerName || "Friend",
+                partnerAvatar: s.payload?.callerAvatar || "✨",
+                isVideo: s.payload?.isVideo !== false,
+              });
+            } else if (s.type === "HANGUP") {
+              setIncomingCall(null);
+            }
+          }
+        }
+      } catch {}
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [currentUser, activeCall]);
+
+  // Play pleasant ringtone when there is an incoming call
+  useEffect(() => {
+    let ctx: AudioContext | null = null;
+    let ringInterval: any = null;
+
+    if (incomingCall) {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          ctx = new AudioCtx();
+          const ring = () => {
+            if (!ctx || ctx.state === "closed") return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(520, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.6);
+          };
+
+          ring();
+          ringInterval = setInterval(ring, 2500);
+        }
+      } catch {}
+    }
+
+    return () => {
+      if (ringInterval) clearInterval(ringInterval);
+      if (ctx && ctx.state !== "closed") {
+        try {
+          ctx.close();
+        } catch {}
+      }
+    };
+  }, [incomingCall]);
+
   // Poll friend direct messages in real time when active
   useEffect(() => {
     if (friendPollIntervalRef.current) clearInterval(friendPollIntervalRef.current);
@@ -193,6 +263,8 @@ export default function Dashboard() {
     setActiveCall({
       roomId: `friendship_${friendshipId}`,
       currentUserId: currentUser.id,
+      currentUserName: currentUser.username,
+      currentUserAvatar: currentUser.avatar,
       partnerName: friendUser.username || "Friend",
       partnerAvatar: friendUser.avatar || "✨",
       isVideoCall: isVideo,
@@ -205,6 +277,8 @@ export default function Dashboard() {
     setActiveCall({
       roomId: incomingCall.roomId,
       currentUserId: currentUser.id,
+      currentUserName: currentUser.username,
+      currentUserAvatar: currentUser.avatar,
       partnerName: incomingCall.partnerName,
       partnerAvatar: incomingCall.partnerAvatar,
       isVideoCall: incomingCall.isVideo,
@@ -1255,6 +1329,8 @@ export default function Dashboard() {
         <VideoCallModal
           roomId={activeCall.roomId}
           currentUserId={activeCall.currentUserId}
+          currentUserName={activeCall.currentUserName}
+          currentUserAvatar={activeCall.currentUserAvatar}
           partnerName={activeCall.partnerName}
           partnerAvatar={activeCall.partnerAvatar}
           isVideoCall={activeCall.isVideoCall}
