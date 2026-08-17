@@ -5,13 +5,32 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function createPrismaClient() {
-  const url =
+function getSafeDatabaseUrl(): string {
+  let url =
     process.env.DATABASE_URL ||
-    "mysql://amandeepsharma:Ishu%401310@localhost:3306/onehourfriend";
+    "mysql://u297792138_amandeepsharma:Ishu%401310@127.0.0.1:3306/u297792138_onehourfriend";
 
-  const adapter = new PrismaMariaDb(url);
-  return new PrismaClient({ adapter });
+  // Fix Linux IPv6 DNS hang on Hostinger: replace localhost with 127.0.0.1
+  if (url.includes("@localhost:")) {
+    url = url.replace("@localhost:", "@127.0.0.1:");
+  } else if (url.includes("@localhost/")) {
+    url = url.replace("@localhost/", "@127.0.0.1/");
+  }
+
+  return url;
+}
+
+function createPrismaClient() {
+  const url = getSafeDatabaseUrl();
+
+  const adapter = new PrismaMariaDb(url, {
+    useTextProtocol: true,
+  });
+
+  return new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+  });
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
