@@ -195,6 +195,17 @@ const DDL_STATEMENTS = [
     CONSTRAINT \`fk_dailyans_question\` FOREIGN KEY (\`questionId\`) REFERENCES \`DailyQuestion\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT \`fk_dailyans_user\` FOREIGN KEY (\`userId\`) REFERENCES \`User\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
+
+  `CREATE TABLE IF NOT EXISTS \`CallSignal\` (
+    \`id\` VARCHAR(191) NOT NULL PRIMARY KEY,
+    \`roomId\` VARCHAR(191) NOT NULL,
+    \`senderId\` VARCHAR(191) NOT NULL,
+    \`type\` VARCHAR(191) NOT NULL,
+    \`payload\` LONGTEXT NOT NULL,
+    \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX (\`roomId\`, \`createdAt\`),
+    INDEX (\`senderId\`)
+  ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
 ];
 
 export async function ensureDbTables() {

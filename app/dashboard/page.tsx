@@ -26,6 +26,7 @@ import {
   CheckCheck,
   Flame,
 } from "lucide-react";
+import VideoCallModal from "@/components/VideoCallModal";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -33,6 +34,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<"chat_home" | "circles" | "friends" | "vent" | "daily_q">("chat_home");
+
+  // Video / Audio Call State
+  const [activeCall, setActiveCall] = useState<any>(null);
+  const [incomingCall, setIncomingCall] = useState<any>(null);
+  const lastSignalCheckRef = useRef<number>(Date.now() - 5000);
 
   // Category Matchmaker Modal
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -152,9 +158,72 @@ export default function Dashboard() {
       if (data.messages) {
         setFriendMessages(data.messages);
       }
+
+      // Check for incoming call signals from friend
+      if (!activeCall) {
+        const sigRes = await fetch(`/api/call/signal?roomId=friendship_${friendshipId}&since=${lastSignalCheckRef.current}`);
+        const sigData = await sigRes.json();
+        if (sigData.signals && sigData.signals.length > 0) {
+          for (const s of sigData.signals) {
+            lastSignalCheckRef.current = new Date(s.createdAt).getTime();
+            if (s.type === "CALL_RING") {
+              const friendUser = activeFriendship?.partner || activeFriendship?.friend;
+              setIncomingCall({
+                roomId: `friendship_${friendshipId}`,
+                partnerName: friendUser?.username || "Friend",
+                partnerAvatar: friendUser?.avatar || "✨",
+                isVideo: s.payload?.isVideo !== false,
+              });
+            } else if (s.type === "HANGUP") {
+              setIncomingCall(null);
+            }
+          }
+        }
+      }
     } catch (e) {
       if (!isSilent) console.error(e);
     }
+  }
+
+  function startFriendCall(isVideo = true) {
+    const friendUser = activeFriendship?.partner || activeFriendship?.friend;
+    const friendshipId = activeFriendship?.id || activeFriendship?.friendshipId;
+    if (!friendUser || !friendshipId || !currentUser) return;
+
+    setActiveCall({
+      roomId: `friendship_${friendshipId}`,
+      currentUserId: currentUser.id,
+      partnerName: friendUser.username || "Friend",
+      partnerAvatar: friendUser.avatar || "✨",
+      isVideoCall: isVideo,
+      isInitiator: true,
+    });
+  }
+
+  function acceptIncomingCall() {
+    if (!incomingCall || !currentUser) return;
+    setActiveCall({
+      roomId: incomingCall.roomId,
+      currentUserId: currentUser.id,
+      partnerName: incomingCall.partnerName,
+      partnerAvatar: incomingCall.partnerAvatar,
+      isVideoCall: incomingCall.isVideo,
+      isInitiator: false,
+    });
+    setIncomingCall(null);
+  }
+
+  async function declineIncomingCall() {
+    if (incomingCall) {
+      try {
+        await fetch("/api/call/signal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId: incomingCall.roomId, type: "HANGUP" }),
+        });
+      } catch {}
+    }
+    setIncomingCall(null);
   }
 
   async function loadVentWall() {
@@ -820,11 +889,20 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button className="p-2.5 rounded-xl bg-white/5 text-zinc-400 hover:text-white">
-                      <Phone className="w-4 h-4" />
+                    <button
+                      onClick={() => startFriendCall(false)}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition flex items-center gap-1.5 text-xs font-bold"
+                      title="Voice Call"
+                    >
+                      <Phone className="w-4 h-4 text-purple-300" />
                     </button>
-                    <button className="p-2.5 rounded-xl bg-white/5 text-zinc-400 hover:text-white">
-                      <Video className="w-4 h-4" />
+                    <button
+                      onClick={() => startFriendCall(true)}
+                      className="p-2.5 rounded-xl bg-[#872bf5] hover:bg-[#7417e3] text-white transition flex items-center gap-1.5 text-xs font-black shadow-md shadow-[#872bf5]/40 hover:scale-105 active:scale-95"
+                      title="Start 1-on-1 Video Call"
+                    >
+                      <Video className="w-4 h-4 fill-white" />
+                      <span className="hidden sm:inline">Video Call</span>
                     </button>
                   </div>
                 </div>
@@ -1135,6 +1213,54 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* INCOMING CALL MODAL POPUP */}
+      {incomingCall && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm bg-[#181824] border-2 border-[#872bf5] rounded-[32px] p-6 text-center space-y-5 shadow-2xl shadow-[#872bf5]/40">
+            <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-2 border-[#872bf5] animate-ping" />
+              <div className="w-16 h-16 rounded-full bg-[#872bf5] flex items-center justify-center text-3xl shadow-lg z-10">
+                {incomingCall.partnerAvatar}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-white">Incoming {incomingCall.isVideo ? "Video" : "Voice"} Call</h3>
+              <p className="text-xs text-purple-300 mt-1 font-medium">{incomingCall.partnerName} is calling you...</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={declineIncomingCall}
+                className="flex-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 font-bold py-3 rounded-2xl text-xs transition"
+              >
+                Decline
+              </button>
+
+              <button
+                onClick={acceptIncomingCall}
+                className="flex-1 bg-[#00e676] hover:bg-[#00c853] text-black font-black py-3 rounded-2xl text-xs transition shadow-lg shadow-[#00e676]/40 hover:scale-105 active:scale-95"
+              >
+                Accept Call 📞
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ACTIVE FULL WEBRTC VIDEO/AUDIO CALL MODAL */}
+      {activeCall && (
+        <VideoCallModal
+          roomId={activeCall.roomId}
+          currentUserId={activeCall.currentUserId}
+          partnerName={activeCall.partnerName}
+          partnerAvatar={activeCall.partnerAvatar}
+          isVideoCall={activeCall.isVideoCall}
+          isInitiator={activeCall.isInitiator}
+          onClose={() => setActiveCall(null)}
+        />
       )}
     </div>
   );
