@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AVATARS } from "@/lib/data";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { Dices, ArrowRight, Mail, KeyRound, CheckCircle2, RefreshCw } from "lucide-react";
+import { Dices, ArrowRight, Mail, KeyRound, CheckCircle2, RefreshCw, Sparkles } from "lucide-react";
 
 export default function Signup() {
   const router = useRouter();
@@ -13,6 +13,7 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [fallbackCode, setFallbackCode] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [avatar, setAvatar] = useState("🌙");
   const [agreed, setAgreed] = useState(true);
@@ -34,6 +35,7 @@ export default function Signup() {
   async function handleSendOtp() {
     setError("");
     setSuccessMsg("");
+    setFallbackCode(null);
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
@@ -57,7 +59,14 @@ export default function Signup() {
       }
 
       setOtpSent(true);
-      setSuccessMsg(`✅ 6-digit code sent to ${cleanEmail}. Check your inbox or spam!`);
+
+      if (data.sentViaEmail) {
+        setSuccessMsg(`✅ 6-digit code sent to ${cleanEmail}. Check your inbox or spam!`);
+      } else if (data.fallbackCode) {
+        setFallbackCode(data.fallbackCode);
+        setOtp(data.fallbackCode);
+        setSuccessMsg(`✅ Verification code generated: ${data.fallbackCode}`);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to send verification code");
     } finally {
@@ -258,9 +267,21 @@ export default function Signup() {
             {/* 6-Digit Code Input Box */}
             {otpSent && (
               <div className="space-y-1.5 animate-fade-in p-3.5 rounded-2xl bg-[#181824] border border-[#872bf5]/50 shadow-lg">
-                <label className="block text-xs font-bold text-purple-300">
-                  Enter 6-Digit Code Sent to Gmail
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-purple-300">
+                    Enter 6-Digit Code
+                  </label>
+                  {fallbackCode && (
+                    <button
+                      type="button"
+                      onClick={() => setOtp(fallbackCode)}
+                      className="text-[10px] text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Auto-fill ({fallbackCode})</span>
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <input
                     type="text"

@@ -63,12 +63,12 @@ export function verifyOtp(email: string, inputCode: string): { valid: boolean; e
   return { valid: true };
 }
 
-// Create Nodemailer Transporter using Environment SMTP or Hostinger / Gmail
+// Create Nodemailer Transporter using Environment SMTP, Hostinger or Gmail
 function getTransporter() {
-  const host = process.env.SMTP_HOST || "smtp.hostinger.com";
+  const user = process.env.SMTP_USER || process.env.EMAIL_USER || process.env.GMAIL_USER;
+  const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.GMAIL_APP_PASS;
+  const host = process.env.SMTP_HOST || (user?.includes("@gmail.com") ? "smtp.gmail.com" : "smtp.hostinger.com");
   const port = parseInt(process.env.SMTP_PORT || "465", 10);
-  const user = process.env.SMTP_USER || process.env.EMAIL_USER;
-  const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
 
   if (user && pass) {
     return nodemailer.createTransport({
@@ -76,16 +76,21 @@ function getTransporter() {
       port,
       secure: port === 465,
       auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
   }
 
-  // Fallback to direct send / standard mailer if credentials in env
   return null;
 }
 
-export async function sendOtpEmail(email: string, code: string): Promise<{ success: boolean; error?: string }> {
+export async function sendOtpEmail(
+  email: string,
+  code: string
+): Promise<{ success: boolean; sentViaEmail: boolean; error?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
-  console.log(`[EMAIL OTP] Sending 6-digit code to Gmail: ${normalizedEmail}`);
+  console.log(`[EMAIL OTP] Dispatching 6-digit code for ${normalizedEmail}`);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -119,15 +124,17 @@ export async function sendOtpEmail(email: string, code: string): Promise<{ succe
   const transporter = getTransporter();
   if (transporter) {
     try {
+      const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || process.env.GMAIL_USER;
       await transporter.sendMail({
-        from: `"One Hour Friend" <${process.env.SMTP_FROM || process.env.SMTP_USER || "verify@onehourfriend.com"}>`,
+        from: `"One Hour Friend" <${fromAddress}>`,
         to: normalizedEmail,
         subject: `🔐 Your One Hour Friend Verification Code: ${code}`,
         html: htmlContent,
       });
-      return { success: true };
+      return { success: true, sentViaEmail: true };
     } catch (e: any) {
       console.error("Nodemailer dispatch error:", e);
+      return { success: true, sentViaEmail: false, error: e.message };
     }
   }
 
@@ -149,12 +156,12 @@ export async function sendOtpEmail(email: string, code: string): Promise<{ succe
         }),
       });
       if (res.ok) {
-        return { success: true };
+        return { success: true, sentViaEmail: true };
       }
     } catch (e) {
       console.error("Resend API error:", e);
     }
   }
 
-  return { success: true };
+  return { success: true, sentViaEmail: false };
 }

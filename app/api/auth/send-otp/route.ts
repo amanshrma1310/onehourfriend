@@ -6,8 +6,8 @@ export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
 
-    // Rate limit: max 6 OTP requests per IP per 5 minutes
-    const rateCheck = checkRateLimit(`otp_${ip}`, 6, 300);
+    // Rate limit: max 10 OTP requests per IP per 5 minutes
+    const rateCheck = checkRateLimit(`otp_${ip}`, 10, 300);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: `Too many requests. Please wait ${rateCheck.retryAfter}s before requesting a new code.` },
@@ -26,10 +26,20 @@ export async function POST(req: Request) {
     const code = generateOtp(cleanEmail);
     const result = await sendOtpEmail(cleanEmail, code);
 
-    return NextResponse.json({
-      success: true,
-      message: `6-digit verification code sent to ${cleanEmail}. Please check your inbox or spam folder.`,
-    });
+    if (result.sentViaEmail) {
+      return NextResponse.json({
+        success: true,
+        sentViaEmail: true,
+        message: `6-digit verification code sent to ${cleanEmail}. Please check your inbox or spam folder.`,
+      });
+    } else {
+      return NextResponse.json({
+        success: true,
+        sentViaEmail: false,
+        fallbackCode: code,
+        message: `Verification code generated! (SMTP credentials not yet added in .env, use code: ${code})`,
+      });
+    }
   } catch (error: any) {
     console.error("Send OTP error:", error);
     return NextResponse.json({ error: error.message || "Failed to send verification code" }, { status: 500 });
