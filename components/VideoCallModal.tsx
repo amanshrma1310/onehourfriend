@@ -8,7 +8,7 @@ import {
   VideoOff,
   PhoneOff,
   ShieldCheck,
-  Volume2,
+  RefreshCw,
 } from "lucide-react";
 
 interface VideoCallModalProps {
@@ -29,8 +29,12 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
     { urls: "stun:stun.services.mozilla.com" },
+    { urls: "stun:stun.cloudflare.com:3478" },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 export default function VideoCallModal({
@@ -57,8 +61,9 @@ export default function VideoCallModal({
   const localStreamRef = useRef<MediaStream | null>(null);
   const pollIntervalRef = useRef<any>(null);
   const ringIntervalRef = useRef<any>(null);
-  const lastSignalTimeRef = useRef<number>(Date.now() - 60 * 1000); // look back 60s for offer
+  const heartbeatIntervalRef = useRef<any>(null);
   const processedSignalIds = useRef<Set<string>>(new Set());
+  const iceCandidatesQueueRef = useRef<RTCIceCandidateInit[]>([]);
 
   // Helper: Send a signaling message
   const sendSignal = useCallback(
@@ -75,6 +80,20 @@ export default function VideoCallModal({
     },
     [roomId, partnerUserId]
   );
+
+  // Flush buffered ICE candidates once remote description is set
+  const flushIceCandidates = useCallback(async (pc: RTCPeerConnection) => {
+    while (iceCandidatesQueueRef.current.length > 0) {
+      const candidateInit = iceCandidatesQueueRef.current.shift();
+      if (candidateInit) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidateInit));
+        } catch (e) {
+          console.error("Failed to add buffered candidate:", e);
+        }
+      }
+    }
+  }, []);
 
   // Play pleasant Web Audio chime while calling
   useEffect(() => {
@@ -122,7 +141,9 @@ export default function VideoCallModal({
       localStreamRef.current = null;
     }
     if (pcRef.current) {
-      pcRef.current.close();
+      try {
+        pcRef.current.close();
+      } catch {}
       pcRef.current = null;
     }
   }, []);
@@ -141,17 +162,18 @@ export default function VideoCallModal({
         localVideoRef.current.srcObject = stream;
       }
 
-      // 2. Create RTCPeerConnection
+      // 2. Create RTCPeerConnection with full STUN pool
       const pc = new RTCPeerConnection(ICE_SERVERS);
       pcRef.current = pc;
 
-      // Add local tracks
+      // Add local media tracks
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       // Handle remote incoming track
       pc.ontrack = (event) => {
         if (remoteVideoRef.current && event.streams[0]) {
           remoteVideoRef.current.srcObject = event.streams[0];
+          remoteVideoRef.current.play().catch(() => {});
           setCallState("CONNECTED");
         }
       };
@@ -174,7 +196,7 @@ export default function VideoCallModal({
       if (isInitiator) {
         setCallState("CALLING");
 
-        // Broadcast CALL_RING signal continuously so receiver catches it immediately
+        // Broadcast Initial Ring
         sendSignal("CALL_RING", {
           callerName: currentUserName,
           callerAvatar: currentUserAvatar,
@@ -182,7 +204,10 @@ export default function VideoCallModal({
         });
 
         // Create WebRTC Offer
-        const offer = await pc.createOffer();
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: isVideoCall,
+        });
         await pc.setLocalDescription(offer);
         sendSignal("OFFER", offer);
       } else {
@@ -199,55 +224,81 @@ export default function VideoCallModal({
     }
   }, [isInitiator, isVideoCall, currentUserName, currentUserAvatar, currentUserId, sendSignal]);
 
+  // Periodic heartbeat for caller while waiting for answer
+  useEffect(() => {
+    if (isInitiator && callState === "CALLING") {
+      heartbeatIntervalRef.current = setInterval(() => {
+        sendSignal("CALL_RING", {
+          callerName: currentUserName,
+          callerAvatar: currentUserAvatar,
+          isVideo: isVideoCall,
+        });
+        if (pcRef.current?.localDescription) {
+          sendSignal("OFFER", pcRef.current.localDescription);
+        }
+      }, 2500);
+    }
+
+    return () => {
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+    };
+  }, [isInitiator, callState, currentUserName, currentUserAvatar, isVideoCall, sendSignal]);
+
   // Signaling Polling Loop
   useEffect(() => {
     initCall();
 
     pollIntervalRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/call/signal?roomId=${roomId}&since=${lastSignalTimeRef.current}`);
+        const res = await fetch(`/api/call/signal?roomId=${roomId}`);
         const data = await res.json();
 
         if (data.signals && data.signals.length > 0) {
           for (const signal of data.signals) {
             if (processedSignalIds.current.has(signal.id)) continue;
             processedSignalIds.current.add(signal.id);
-            lastSignalTimeRef.current = signal.timestamp || new Date(signal.createdAt).getTime() || Date.now();
 
             const pc = pcRef.current;
+            if (!pc) continue;
 
-            if (signal.type === "CALL_ACCEPT" && isInitiator && pc) {
+            if (signal.type === "CALL_ACCEPT" && isInitiator) {
               setCallState("CONNECTING");
-              // Re-send current offer to ensure receiver has it
               if (pc.localDescription) {
                 sendSignal("OFFER", pc.localDescription);
               }
-            } else if (signal.type === "OFFER" && pc) {
+            } else if (signal.type === "OFFER") {
               if (pc.signalingState === "stable" || pc.signalingState === "have-local-offer") {
                 await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
+                await flushIceCandidates(pc);
+
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 sendSignal("ANSWER", answer);
-              }
-            } else if (signal.type === "ANSWER" && pc) {
-              if (pc.signalingState === "have-local-offer") {
-                await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
                 setCallState("CONNECTED");
               }
-            } else if (signal.type === "CANDIDATE" && pc) {
-              try {
-                if (pc.remoteDescription) {
+            } else if (signal.type === "ANSWER") {
+              if (pc.signalingState === "have-local-offer") {
+                await pc.setRemoteDescription(new RTCSessionDescription(signal.payload));
+                await flushIceCandidates(pc);
+                setCallState("CONNECTED");
+              }
+            } else if (signal.type === "CANDIDATE") {
+              if (pc.remoteDescription && pc.remoteDescription.type) {
+                try {
                   await pc.addIceCandidate(new RTCIceCandidate(signal.payload));
+                } catch (e) {
+                  console.error("Candidate add error:", e);
                 }
-              } catch (e) {
-                console.error("Candidate add error", e);
+              } else {
+                // Buffer candidate until remote description is set
+                iceCandidatesQueueRef.current.push(signal.payload);
               }
             } else if (signal.type === "HANGUP" || signal.type === "CALL_DECLINE") {
               setCallState("ENDED");
               setTimeout(() => {
                 handleCleanClose();
                 onClose();
-              }, 1200);
+              }, 800);
             }
           }
         }
@@ -260,7 +311,7 @@ export default function VideoCallModal({
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       handleCleanClose();
     };
-  }, [roomId, initCall, isInitiator, sendSignal, handleCleanClose, onClose]);
+  }, [roomId, initCall, isInitiator, sendSignal, flushIceCandidates, handleCleanClose, onClose]);
 
   // Live Timer during active call
   useEffect(() => {
@@ -308,7 +359,7 @@ export default function VideoCallModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-4 md:p-6 select-none animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-3 md:p-6 select-none animate-fade-in">
       {/* Top Header Strip */}
       <div className="w-full max-w-5xl flex items-center justify-between z-20">
         <div className="flex items-center gap-3">
@@ -336,37 +387,37 @@ export default function VideoCallModal({
         </div>
 
         {/* Live Call Duration */}
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#181824] border border-white/10 text-xs font-mono font-bold text-white shadow-lg">
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181824] border border-white/10 text-xs font-mono font-bold text-white shadow-lg">
           <span className="w-2 h-2 rounded-full bg-[#872bf5] animate-ping" />
           <span>{formatTimer(callDuration)}</span>
         </div>
       </div>
 
       {/* Main Video Viewport Area */}
-      <div className="relative w-full max-w-5xl flex-1 my-4 rounded-[32px] overflow-hidden bg-[#121218] border border-white/10 shadow-2xl flex items-center justify-center">
+      <div className="relative w-full max-w-5xl flex-1 my-3 md:my-4 rounded-[28px] md:rounded-[32px] overflow-hidden bg-[#121218] border border-white/10 shadow-2xl flex items-center justify-center">
         {/* Remote Video Stream */}
         <video
           ref={remoteVideoRef}
           autoPlay
           playsInline
-          className={`w-full h-full object-cover rounded-[32px] ${
+          className={`w-full h-full object-cover rounded-[28px] md:rounded-[32px] ${
             callState === "CONNECTED" ? "block" : "hidden"
           }`}
         />
 
         {/* Placeholder Screen when calling or camera is off */}
         {callState !== "CONNECTED" && (
-          <div className="flex flex-col items-center justify-center text-center p-8 space-y-6">
-            <div className="relative w-32 h-32 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center text-center p-6 md:p-8 space-y-5">
+            <div className="relative w-28 h-28 md:w-32 md:h-32 flex items-center justify-center">
               <div className="absolute inset-0 rounded-full border border-[#872bf5]/40 animate-radar-1" />
               <div className="absolute inset-0 rounded-full border border-purple-400/40 animate-radar-2" />
-              <div className="w-20 h-20 rounded-full bg-[#872bf5] flex items-center justify-center text-4xl shadow-2xl shadow-[#872bf5]/60 z-10 animate-bounce">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-[#872bf5] flex items-center justify-center text-3xl md:text-4xl shadow-2xl shadow-[#872bf5]/60 z-10 animate-bounce">
                 {partnerAvatar}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <h2 className="text-xl md:text-2xl font-black text-white">
+            <div className="space-y-1.5">
+              <h2 className="text-lg md:text-2xl font-black text-white">
                 {callState === "CALLING"
                   ? `Calling ${partnerName}...`
                   : callState === "CONNECTING"
@@ -374,14 +425,14 @@ export default function VideoCallModal({
                   : "Call Ended"}
               </h2>
               <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-                {errorMessage || "Live peer-to-peer WebRTC connection is securing your call."}
+                {errorMessage || "Establishing direct peer-to-peer HD encrypted video connection..."}
               </p>
             </div>
           </div>
         )}
 
         {/* Floating Picture-in-Picture Self Video Preview */}
-        <div className="absolute bottom-5 right-5 w-32 h-44 sm:w-44 sm:h-56 rounded-2xl overflow-hidden bg-[#181824] border-2 border-[#872bf5] shadow-2xl z-30 group">
+        <div className="absolute bottom-4 right-4 w-28 h-36 sm:w-40 sm:h-52 rounded-2xl overflow-hidden bg-[#181824] border-2 border-[#872bf5] shadow-2xl z-30 group">
           <video
             ref={localVideoRef}
             autoPlay
@@ -393,22 +444,22 @@ export default function VideoCallModal({
           />
           {isVideoDisabled && (
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#181824] text-zinc-400 text-xs gap-1">
-              <VideoOff className="w-6 h-6 text-zinc-500" />
+              <VideoOff className="w-5 h-5 text-zinc-500" />
               <span className="text-[10px] font-bold">Camera Off</span>
             </div>
           )}
-          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
+          <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
             You
           </div>
         </div>
       </div>
 
       {/* Bottom Floating Control Bar */}
-      <div className="w-full max-w-md bg-[#181824] border border-white/10 rounded-full p-3 px-6 shadow-2xl flex items-center justify-between z-20">
+      <div className="w-full max-w-md bg-[#181824] border border-white/10 rounded-full p-2.5 px-6 shadow-2xl flex items-center justify-between z-20">
         {/* Mic Mute/Unmute */}
         <button
           onClick={toggleAudio}
-          className={`p-3.5 rounded-full transition shadow-md hover:scale-110 active:scale-95 ${
+          className={`p-3 rounded-full transition shadow-md hover:scale-110 active:scale-95 ${
             isAudioMuted
               ? "bg-red-500/20 border border-red-500/40 text-red-400"
               : "bg-white/10 hover:bg-white/20 text-white"
@@ -421,7 +472,7 @@ export default function VideoCallModal({
         {/* Camera Toggle */}
         <button
           onClick={toggleVideo}
-          className={`p-3.5 rounded-full transition shadow-md hover:scale-110 active:scale-95 ${
+          className={`p-3 rounded-full transition shadow-md hover:scale-110 active:scale-95 ${
             isVideoDisabled
               ? "bg-red-500/20 border border-red-500/40 text-red-400"
               : "bg-white/10 hover:bg-white/20 text-white"
@@ -434,10 +485,10 @@ export default function VideoCallModal({
         {/* End Call Button */}
         <button
           onClick={handleHangup}
-          className="p-4 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-xl shadow-red-600/40 transition hover:scale-110 active:scale-95 flex items-center justify-center"
+          className="p-3.5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-xl shadow-red-600/40 transition hover:scale-110 active:scale-95 flex items-center justify-center"
           title="End Call"
         >
-          <PhoneOff className="w-6 h-6" />
+          <PhoneOff className="w-5 h-5" />
         </button>
       </div>
     </div>
