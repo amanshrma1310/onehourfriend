@@ -150,15 +150,29 @@ export default function VideoCallModal({
 
   // Main Call Initializer
   const initCall = useCallback(async () => {
+    setErrorMessage(null);
     try {
-      // 1. Get Camera and Microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: isVideoCall ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
-        audio: true,
-      });
+      // 1. Get Camera and Microphone access with graceful audio-only fallback
+      let stream: MediaStream | null = null;
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: isVideoCall ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
+          audio: true,
+        });
+      } catch (videoErr: any) {
+        console.warn("Video getUserMedia failed, attempting audio-only fallback:", videoErr);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          setIsVideoDisabled(true);
+        } catch (audioErr: any) {
+          console.error("Audio getUserMedia also failed:", audioErr);
+          throw audioErr;
+        }
+      }
 
       localStreamRef.current = stream;
-      if (localVideoRef.current) {
+      if (localVideoRef.current && stream.getVideoTracks().length > 0) {
         localVideoRef.current.srcObject = stream;
       }
 
@@ -216,11 +230,15 @@ export default function VideoCallModal({
       }
     } catch (err: any) {
       console.error("Media error:", err);
-      setErrorMessage(
-        err.name === "NotAllowedError"
-          ? "Camera/Mic permission was denied. Please allow permissions in your browser."
-          : "Could not access camera/microphone."
-      );
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setErrorMessage("Camera/Microphone permission was denied. Click the lock 🔒 icon in your browser address bar, enable Camera & Mic, and tap Retry.");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        setErrorMessage("No camera or microphone found on your device.");
+      } else if (window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
+        setErrorMessage("Browsers require an HTTPS secure connection (SSL) to enable camera and microphone.");
+      } else {
+        setErrorMessage("Could not access camera/microphone: " + (err.message || "Unknown device error"));
+      }
     }
   }, [isInitiator, isVideoCall, currentUserName, currentUserAvatar, currentUserId, sendSignal]);
 
@@ -416,7 +434,7 @@ export default function VideoCallModal({
               </div>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <h2 className="text-lg md:text-2xl font-black text-white">
                 {callState === "CALLING"
                   ? `Calling ${partnerName}...`
@@ -424,9 +442,21 @@ export default function VideoCallModal({
                   ? `Connecting with ${partnerName}...`
                   : "Call Ended"}
               </h2>
-              <p className="text-xs text-zinc-400 max-w-xs mx-auto">
+              <p className="text-xs text-zinc-300 max-w-sm mx-auto leading-relaxed">
                 {errorMessage || "Establishing direct peer-to-peer HD encrypted video connection..."}
               </p>
+
+              {errorMessage && (
+                <div className="pt-2">
+                  <button
+                    onClick={() => initCall()}
+                    className="bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-[#872bf5]/40 flex items-center gap-2 mx-auto transition hover:scale-105 active:scale-95"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Retry Permission & Reconnect</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
