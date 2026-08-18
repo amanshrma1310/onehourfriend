@@ -6,8 +6,8 @@ export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
 
-    // Rate limit: max 5 OTP requests per IP per 5 minutes
-    const rateCheck = checkRateLimit(`otp_${ip}`, 5, 300);
+    // Rate limit: max 6 OTP requests per IP per 5 minutes
+    const rateCheck = checkRateLimit(`otp_${ip}`, 6, 300);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: `Too many requests. Please wait ${rateCheck.retryAfter}s before requesting a new code.` },
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     const cleanEmail = sanitizeText(email, 100);
     if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
-      return NextResponse.json({ error: "Please provide a valid email address" }, { status: 400 });
+      return NextResponse.json({ error: "Please enter a valid Gmail / email address" }, { status: 400 });
     }
 
     const code = generateOtp(cleanEmail);
@@ -28,8 +28,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Verification code sent to ${cleanEmail}`,
-      previewCode: result.previewCode,
+      message: `6-digit verification code sent to ${cleanEmail}. Please check your inbox or spam folder.`,
     });
   } catch (error: any) {
     console.error("Send OTP error:", error);

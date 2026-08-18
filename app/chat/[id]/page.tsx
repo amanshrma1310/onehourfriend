@@ -46,6 +46,9 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [friendRequestSent, setFriendRequestSent] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [incomingFriendRequest, setIncomingFriendRequest] = useState<any>(null);
+  const [friendshipAccepted, setFriendshipAccepted] = useState(false);
 
   // Video / Audio Call State
   const [activeCall, setActiveCall] = useState<any>(null);
@@ -54,7 +57,6 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
 
   // Modals & UI States
   const [showToolbox, setShowToolbox] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
@@ -219,6 +221,19 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
           }
         }
       }
+      // Check for incoming friend request from partner
+      if (partner?.id && !friendshipAccepted) {
+        try {
+          const reqRes = await fetch("/api/friends/request");
+          const reqData = await reqRes.json();
+          if (reqData.requests) {
+            const incoming = reqData.requests.find((r: any) => r.senderId === partner.id);
+            if (incoming) {
+              setIncomingFriendRequest(incoming);
+            }
+          }
+        } catch {}
+      }
     } catch (e) {
       console.error(e);
     }
@@ -274,6 +289,33 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
     } catch {
       alert("Failed to send friend request.");
     }
+  }
+
+  async function handleAcceptInChatFriendRequest(reqId: string) {
+    try {
+      const res = await fetch("/api/friends/request", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: reqId, action: "ACCEPT" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFriendshipAccepted(true);
+        setIncomingFriendRequest(null);
+        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+      }
+    } catch {}
+  }
+
+  async function handleDeclineInChatFriendRequest(reqId: string) {
+    try {
+      await fetch("/api/friends/request", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: reqId, action: "DECLINE" }),
+      });
+      setIncomingFriendRequest(null);
+    } catch {}
   }
 
   async function declineIncomingCall() {
@@ -487,12 +529,12 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
   }
 
   return (
-    <main className="h-screen flex bg-[#121218] text-white overflow-hidden selection:bg-[#872bf5] selection:text-white">
+    <main className="h-[100dvh] max-h-[100dvh] flex bg-[#121218] text-white overflow-hidden selection:bg-[#872bf5] selection:text-white">
       {/* MAIN CHAT STREAM */}
       <section className="flex-1 flex flex-col h-full border-r border-white/10 bg-[#121218] min-w-0">
         {/* Header Strip */}
-        <header className="border-b border-white/10 bg-[#181824] px-4 md:px-6 py-3 flex items-center justify-between z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="border-b border-white/10 bg-[#181824] px-3 md:px-6 py-2.5 md:py-3 flex items-center justify-between z-20 shrink-0">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <Link
               href="/dashboard"
               className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition shrink-0"
@@ -501,19 +543,19 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               <ArrowLeft className="w-4 h-4" />
             </Link>
 
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <div className="relative shrink-0">
                 <span className="text-2xl md:text-3xl">{partner?.avatar || "👨‍💻"}</span>
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-2 ring-[#181824]" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-white truncate">{partner?.username || "Friend"}</span>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#872bf5]/25 text-purple-200 shrink-0 hidden sm:inline-block">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs md:text-sm font-black text-white truncate">{partner?.username || "Friend"}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#872bf5]/25 text-purple-200 shrink-0 hidden sm:inline-block">
                     {currentZone.emoji} {currentZone.name}
                   </span>
                 </div>
-                <div className="text-[11px] text-[#00e676] font-semibold flex items-center gap-1 mt-0.5">
+                <div className="text-[10px] md:text-[11px] text-[#00e676] font-semibold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#00e676]" />
                   <span>Active Now</span>
                 </div>
@@ -521,10 +563,10 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 md:gap-2.5 shrink-0">
             {/* Live 60-Minute Countdown Clock */}
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono font-black shadow-md ${
+              className={`flex items-center gap-1 px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border text-[11px] md:text-xs font-mono font-black shadow-md ${
                 remainingSeconds < 300
                   ? "bg-red-500/20 border-red-500 text-red-400 animate-pulse"
                   : remainingSeconds < 600
@@ -539,16 +581,18 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
             {/* Add Friend Request Button */}
             <button
               onClick={handleSendFriendRequest}
-              disabled={friendRequestSent}
+              disabled={friendRequestSent || friendshipAccepted}
               className={`p-2 md:px-3 md:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
-                friendRequestSent
+                friendRequestSent || friendshipAccepted
                   ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                   : "bg-white/5 hover:bg-[#872bf5]/20 text-purple-200 border border-white/10 hover:border-[#872bf5]/40 hover:scale-105 active:scale-95"
               }`}
               title="Send Friend Request"
             >
               <UserPlus className="w-4 h-4 text-[#00e676]" />
-              <span className="hidden sm:inline">{friendRequestSent ? "Request Sent" : "Add Friend"}</span>
+              <span className="hidden sm:inline">
+                {friendshipAccepted ? "Friends" : friendRequestSent ? "Request Sent" : "Add Friend"}
+              </span>
             </button>
 
             {/* Video Call Button (Prominent) */}
@@ -570,35 +614,57 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               <Phone className="w-4 h-4" />
             </button>
 
-            {/* Prompts button */}
-            <button
-              onClick={() => setShowToolbox(true)}
-              className="p-2 rounded-xl bg-[#872bf5]/20 hover:bg-[#872bf5]/30 border border-[#872bf5]/40 text-purple-200 text-xs font-bold flex items-center gap-1.5 transition"
-              title="Conversation Prompts"
-            >
-              <Sparkles className="w-4 h-4" />
-            </button>
-
-            {/* Exit / Skip Room Button (Prominent) */}
+            {/* Exit / Skip Room Button */}
             <button
               onClick={() => setShowExitConfirmModal(true)}
-              className="p-2 px-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 hover:text-red-200 border border-red-500/30 text-xs font-bold flex items-center gap-1.5 transition hover:scale-105 active:scale-95"
-              title="Leave / Exit Conversation"
+              className="p-2 px-2.5 md:px-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 hover:text-red-200 border border-red-500/30 text-xs font-bold flex items-center gap-1 transition hover:scale-105 active:scale-95"
+              title="Leave Conversation"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Exit Room</span>
+              <span className="hidden sm:inline">Exit</span>
             </button>
           </div>
         </header>
+
+        {/* In-Chat Incoming Friend Request Banner */}
+        {incomingFriendRequest && (
+          <div className="bg-[#872bf5] text-white px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg z-20 animate-fade-in text-xs">
+            <div className="flex items-center gap-2 font-bold min-w-0 truncate">
+              <UserPlus className="w-4 h-4 text-emerald-300 shrink-0" />
+              <span>{partner?.username || "Your partner"} sent you a friend request!</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => handleAcceptInChatFriendRequest(incomingFriendRequest.id)}
+                className="bg-white text-[#872bf5] hover:bg-zinc-100 font-black px-3 py-1.5 rounded-xl shadow transition text-xs hover:scale-105 active:scale-95"
+              >
+                Accept 🤝
+              </button>
+              <button
+                onClick={() => handleDeclineInChatFriendRequest(incomingFriendRequest.id)}
+                className="bg-black/30 hover:bg-black/50 text-white font-semibold px-2.5 py-1.5 rounded-xl transition text-xs"
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        )}
+
+        {friendshipAccepted && (
+          <div className="bg-emerald-600 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-md z-20 text-xs font-bold animate-fade-in">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>You are now permanent friends! Direct messages unlocked in Dashboard.</span>
+          </div>
+        )}
 
         {/* Scrollable Message Viewport with Smart Scroll Detection */}
         <div
           ref={chatContainerRef}
           onScroll={handleChatScroll}
-          className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full relative min-h-0"
+          className="flex-1 overflow-y-auto p-3 md:p-6 space-y-3.5 max-w-4xl mx-auto w-full relative min-h-0"
         >
-          <div className="text-center py-2">
-            <span className="text-[11px] font-bold text-zinc-500 px-3 py-1 rounded-full bg-white/5">
+          <div className="text-center py-1">
+            <span className="text-[10px] md:text-[11px] font-bold text-zinc-500 px-3 py-1 rounded-full bg-white/5">
               60-Minute Encrypted Session
             </span>
           </div>
@@ -635,14 +701,14 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
             return (
               <div
                 key={msg.id}
-                className={`flex items-end gap-2.5 ${isMe ? "justify-end" : "justify-start"}`}
+                className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
               >
                 {!isMe && (
                   <span className="text-2xl shrink-0 pb-1">{partner?.avatar || "👨‍💻"}</span>
                 )}
 
                 <div
-                  className={`max-w-md md:max-w-lg p-3.5 md:p-4 rounded-3xl text-xs leading-relaxed ${
+                  className={`max-w-[85%] md:max-w-lg p-3 md:p-4 rounded-3xl text-xs leading-relaxed ${
                     isMe
                       ? "bg-[#872bf5] text-white font-medium rounded-br-none shadow-lg shadow-[#872bf5]/25"
                       : "bg-[#20202c] text-white rounded-bl-none border border-white/5 shadow-md"
@@ -650,7 +716,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
                 >
                   <div className="whitespace-pre-wrap text-[13px] leading-snug">{msg.content}</div>
                   <div
-                    className={`text-[9px] mt-1.5 flex items-center gap-1 justify-end ${
+                    className={`text-[9px] mt-1 flex items-center gap-1 justify-end ${
                       isMe ? "text-purple-200" : "text-zinc-400"
                     }`}
                   >
@@ -676,40 +742,53 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         {showScrollBottomBtn && (
           <button
             onClick={() => scrollToBottom("smooth")}
-            className="fixed bottom-28 right-8 z-30 bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold py-2 px-4 rounded-full shadow-2xl flex items-center gap-1.5 transition hover:scale-105 active:scale-95 animate-bounce"
+            className="fixed bottom-24 right-6 z-30 bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold py-2 px-4 rounded-full shadow-2xl flex items-center gap-1.5 transition hover:scale-105 active:scale-95 animate-bounce"
           >
             <ChevronDown className="w-4 h-4" />
             <span>Latest Messages</span>
           </button>
         )}
 
-        {/* Footer with Quick Emoji Bar & Message Input */}
-        <footer className="border-t border-white/10 bg-[#181824] p-3 md:p-4 max-w-4xl mx-auto w-full shrink-0 space-y-2.5 z-20">
-          {/* Quick 1-Tap Emoji Reaction Bar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-            <span className="text-[10px] uppercase font-bold text-zinc-500 shrink-0 mr-1">Quick:</span>
-            {POPULAR_EMOJIS.map((emoji, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleAddEmoji(emoji)}
-                className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-[#872bf5]/30 hover:scale-125 transition flex items-center justify-center text-sm shrink-0 active:scale-95"
-                title={`Add ${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
+        {/* Footer with Message Input Always Visible on Mobile */}
+        <footer className="border-t border-white/10 bg-[#181824] p-2 md:p-3 w-full shrink-0 relative z-20">
+          {/* Emoji Popover */}
+          {showEmojiPicker && (
+            <div className="absolute bottom-full left-0 right-0 p-2.5 bg-[#181824] border-t border-white/10 flex items-center gap-1.5 overflow-x-auto shadow-2xl z-30 animate-fade-in scrollbar-none">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 shrink-0 mr-1">Emojis:</span>
+              {POPULAR_EMOJIS.map((emoji, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleAddEmoji(emoji)}
+                  className="w-8 h-8 rounded-xl bg-white/[0.05] hover:bg-[#872bf5]/40 hover:scale-125 transition flex items-center justify-center text-sm shrink-0 active:scale-95"
+                  title={`Add ${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Input Form */}
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#121218] border border-white/10 rounded-2xl p-1.5 pl-3">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 bg-[#121218] border border-white/10 rounded-2xl p-1.5 pl-2 max-w-4xl mx-auto">
             <button
               type="button"
               onClick={() => setShowToolbox(true)}
               className="p-2 rounded-xl text-purple-300 hover:text-white hover:bg-white/5 transition shrink-0"
-              title="Conversation Starters"
+              title="Prompts"
             >
-              <Plus className="w-4 h-4" />
+              <Sparkles className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className={`p-2 rounded-xl transition shrink-0 ${
+                showEmojiPicker ? "bg-[#872bf5] text-white" : "text-zinc-400 hover:text-white hover:bg-white/5"
+              }`}
+              title="Emojis"
+            >
+              <Smile className="w-4 h-4" />
             </button>
 
             <input
@@ -718,13 +797,13 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               disabled={isCompleted}
-              className="flex-1 bg-transparent text-xs md:text-sm text-white placeholder:text-zinc-500 outline-none"
+              className="flex-1 min-w-0 bg-transparent text-xs md:text-sm text-white placeholder:text-zinc-500 outline-none"
             />
 
             <button
               type="submit"
               disabled={sending || !newMessage.trim() || isCompleted}
-              className="bg-[#872bf5] hover:bg-[#7417e3] text-white font-black px-4 md:px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-[#872bf5]/30 flex items-center gap-1.5 disabled:opacity-40 shrink-0"
+              className="bg-[#872bf5] hover:bg-[#7417e3] text-white font-black px-4 md:px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-[#872bf5]/30 flex items-center gap-1.5 disabled:opacity-40 shrink-0 hover:scale-105 active:scale-95"
             >
               <span>Send</span>
               <Send className="w-3.5 h-3.5 fill-white" />

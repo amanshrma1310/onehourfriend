@@ -1593,6 +1593,70 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* 4. Mobile Bottom Navigation Bar (Visible only on mobile screens) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#181824]/95 backdrop-blur-lg border-t border-white/10 px-2 py-1.5 flex items-center justify-around">
+        <button
+          onClick={() => setActiveTab("chat_home")}
+          className={`p-2 rounded-xl flex flex-col items-center gap-0.5 text-[10px] font-bold transition ${
+            activeTab === "chat_home" ? "text-[#872bf5]" : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Home className="w-4 h-4" />
+          <span>Home</span>
+        </button>
+
+        <button
+          onClick={() => setShowCategoryModal(true)}
+          className="p-2 rounded-xl flex flex-col items-center gap-0.5 text-[10px] font-bold text-purple-300"
+        >
+          <Zap className="w-4 h-4 fill-purple-400" />
+          <span>Match</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("friends")}
+          className={`p-2 rounded-xl flex flex-col items-center gap-0.5 text-[10px] font-bold transition ${
+            activeTab === "friends" ? "text-[#872bf5]" : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>Friends</span>
+        </button>
+
+        <button
+          onClick={() => setShowFriendRequestsModal(true)}
+          className="p-2 rounded-xl flex flex-col items-center gap-0.5 text-[10px] font-bold text-zinc-400 hover:text-white relative"
+        >
+          <UserPlus className="w-4 h-4" />
+          <span>Requests</span>
+          {friendRequests.length > 0 && (
+            <span className="absolute top-1 right-2 w-3.5 h-3.5 rounded-full bg-red-500 text-[8px] font-black text-white flex items-center justify-center animate-pulse">
+              {friendRequests.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("vent")}
+          className={`p-2 rounded-xl flex flex-col items-center gap-0.5 text-[10px] font-bold transition ${
+            activeTab === "vent" ? "text-[#872bf5]" : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Heart className="w-4 h-4" />
+          <span>Vent</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("daily_q")}
+          className={`p-2 rounded-xl flex flex-col items-center gap-0.5 text-[10px] font-bold transition ${
+            activeTab === "daily_q" ? "text-[#872bf5]" : "text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Daily</span>
+        </button>
+      </nav>
+
       {/* ACTIVE FULL WEBRTC VIDEO/AUDIO CALL MODAL */}
       {activeCall && (
         <VideoCallModal

@@ -37,7 +37,6 @@ export async function POST(req: Request) {
         nowMs
       );
     } catch {
-      // Fallback if targetUserId column is still pending
       await prisma.$executeRawUnsafe(
         "INSERT INTO `CallSignal` (`id`, `roomId`, `senderId`, `type`, `payload`, `timestamp`, `createdAt`) VALUES (?, ?, ?, ?, ?, ?, NOW(3))",
         signalId,
@@ -49,12 +48,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Clean up signals older than 5 minutes
-    const fiveMinsAgoMs = nowMs - 5 * 60 * 1000;
+    // Clean up signals older than 3 minutes
+    const threeMinsAgoMs = nowMs - 3 * 60 * 1000;
     try {
       await prisma.$executeRawUnsafe(
         "DELETE FROM `CallSignal` WHERE `timestamp` < ?",
-        fiveMinsAgoMs
+        threeMinsAgoMs
       );
     } catch {}
 
@@ -76,17 +75,11 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const roomId = url.searchParams.get("roomId");
-    const since = url.searchParams.get("since");
     const checkIncoming = url.searchParams.get("checkIncoming");
 
     const now = Date.now();
-    let sinceMs: number = now - 30 * 1000;
-    if (since) {
-      const parsed = parseInt(since, 10);
-      if (!isNaN(parsed) && parsed > 0) {
-        sinceMs = parsed;
-      }
-    }
+    // Use server-side relative window (last 45 seconds) to eliminate any device clock skew!
+    const activeWindowMs = now - 45 * 1000;
 
     let rows: any[] = [];
 
@@ -96,14 +89,14 @@ export async function GET(req: Request) {
           "SELECT `id`, `roomId`, `senderId`, `targetUserId`, `type`, `payload`, `timestamp`, `createdAt` FROM `CallSignal` WHERE `roomId` = ? AND `senderId` != ? AND `timestamp` > ? ORDER BY `timestamp` ASC LIMIT 50",
           roomId,
           user.id,
-          sinceMs
+          activeWindowMs
         );
       } catch {
         rows = await prisma.$queryRawUnsafe(
           "SELECT `id`, `roomId`, `senderId`, `type`, `payload`, `timestamp`, `createdAt` FROM `CallSignal` WHERE `roomId` = ? AND `senderId` != ? AND `timestamp` > ? ORDER BY `timestamp` ASC LIMIT 50",
           roomId,
           user.id,
-          sinceMs
+          activeWindowMs
         );
       }
     } else if (checkIncoming === "true") {
@@ -130,20 +123,19 @@ export async function GET(req: Request) {
         roomIds.push(`session_${activeSession.id}`);
       }
 
-      // Check direct signals targeting this user or roomIds
       if (roomIds.length > 0) {
         const placeholders = roomIds.map(() => "?").join(",");
         try {
           const query = `SELECT \`id\`, \`roomId\`, \`senderId\`, \`targetUserId\`, \`type\`, \`payload\`, \`timestamp\`, \`createdAt\` FROM \`CallSignal\` WHERE (\`targetUserId\` = ? OR \`roomId\` IN (${placeholders})) AND \`senderId\` != ? AND \`type\` = 'CALL_RING' AND \`timestamp\` > ? ORDER BY \`timestamp\` DESC LIMIT 10`;
-          rows = await prisma.$queryRawUnsafe(query, user.id, ...roomIds, user.id, sinceMs);
+          rows = await prisma.$queryRawUnsafe(query, user.id, ...roomIds, user.id, activeWindowMs);
         } catch {
           const query = `SELECT \`id\`, \`roomId\`, \`senderId\`, \`type\`, \`payload\`, \`timestamp\`, \`createdAt\` FROM \`CallSignal\` WHERE \`roomId\` IN (${placeholders}) AND \`senderId\` != ? AND \`type\` = 'CALL_RING' AND \`timestamp\` > ? ORDER BY \`timestamp\` DESC LIMIT 10`;
-          rows = await prisma.$queryRawUnsafe(query, ...roomIds, user.id, sinceMs);
+          rows = await prisma.$queryRawUnsafe(query, ...roomIds, user.id, activeWindowMs);
         }
       } else {
         try {
           const query = "SELECT `id`, `roomId`, `senderId`, `targetUserId`, `type`, `payload`, `timestamp`, `createdAt` FROM `CallSignal` WHERE `targetUserId` = ? AND `senderId` != ? AND `type` = 'CALL_RING' AND `timestamp` > ? ORDER BY `timestamp` DESC LIMIT 10";
-          rows = await prisma.$queryRawUnsafe(query, user.id, user.id, sinceMs);
+          rows = await prisma.$queryRawUnsafe(query, user.id, user.id, activeWindowMs);
         } catch {}
       }
     }
