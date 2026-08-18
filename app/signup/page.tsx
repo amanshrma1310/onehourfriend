@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AVATARS } from "@/lib/data";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { Dices, ArrowRight, Mail, KeyRound, CheckCircle2, RefreshCw } from "lucide-react";
+import { Dices, ArrowRight, Mail, KeyRound, CheckCircle2, RefreshCw, Sparkles, ShieldCheck } from "lucide-react";
 
 export default function Signup() {
   const router = useRouter();
@@ -32,13 +32,14 @@ export default function Signup() {
     setUsername(random);
   }
 
-  async function handleSendOtp() {
+  async function handleSendOtp(targetEmail?: string) {
     setError("");
     setSuccessMsg("");
+    const emailToUse = targetEmail || email.trim();
 
-    if (!email.trim() || !email.includes("@") || !email.includes(".")) {
-      setError("Please enter a valid email address first");
-      return;
+    if (!emailToUse || !emailToUse.includes("@") || !emailToUse.includes(".")) {
+      setError("Please enter a valid email address first (e.g. you@gmail.com)");
+      return null;
     }
 
     setOtpLoading(true);
@@ -47,22 +48,25 @@ export default function Signup() {
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: emailToUse }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to send code");
+        throw new Error(data.error || "Failed to generate code");
       }
 
       setOtpSent(true);
       if (data.previewCode) {
         setPreviewOtp(data.previewCode);
+        setOtp(data.previewCode); // Auto-fill code immediately for instant friction-free signup!
       }
-      setSuccessMsg(`Verification code sent to ${email.trim()}`);
+      setSuccessMsg(`Verification code generated for ${emailToUse}`);
+      return data.previewCode;
     } catch (err: any) {
       setError(err.message || "Failed to send code");
+      return null;
     } finally {
       setOtpLoading(false);
     }
@@ -77,9 +81,17 @@ export default function Signup() {
       return;
     }
 
-    if (email.trim() && !otp.trim()) {
-      setError("Please enter the 6-digit email verification code");
-      return;
+    const cleanEmail = email.trim();
+    let codeToSubmit = otp.trim();
+
+    // If email is entered but no code yet, automatically fetch and fill the code!
+    if (cleanEmail && !codeToSubmit) {
+      const generatedCode = await handleSendOtp(cleanEmail);
+      if (generatedCode) {
+        codeToSubmit = generatedCode;
+      } else {
+        return;
+      }
     }
 
     if (!agreed) {
@@ -95,8 +107,8 @@ export default function Signup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: username.trim(),
-          email: email.trim() || undefined,
-          otp: otp.trim() || undefined,
+          email: cleanEmail || undefined,
+          otp: codeToSubmit || undefined,
           password: password || undefined,
           avatar,
           activeRole: "PROBLEM_FACER",
@@ -161,19 +173,31 @@ export default function Signup() {
             </div>
           )}
 
+          {/* Active Verification Code Banner */}
           {previewOtp && (
-            <div className="p-3 rounded-2xl bg-purple-500/20 border border-purple-500/40 text-purple-200 text-xs flex items-center justify-between animate-fade-in">
-              <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-purple-400" />
-                <span>Verification Code: <strong className="font-mono text-white text-sm tracking-wider">{previewOtp}</strong></span>
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#872bf5]/30 to-purple-800/30 border border-[#872bf5]/60 text-purple-100 text-xs space-y-2 shadow-lg shadow-[#872bf5]/20 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-bold text-white">
+                  <ShieldCheck className="w-4 h-4 text-[#00e676]" />
+                  <span>Your Verification Code</span>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00e676]/20 text-[#00e676] font-bold">
+                  Ready
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setOtp(previewOtp)}
-                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-[#872bf5] hover:bg-[#7417e3] text-white transition"
-              >
-                Auto-Fill
-              </button>
+
+              <div className="flex items-center justify-between bg-[#121218]/80 p-2.5 rounded-xl border border-white/10">
+                <span className="font-mono text-xl tracking-[4px] font-black text-white px-2">
+                  {previewOtp}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOtp(previewOtp)}
+                  className="text-xs font-extrabold px-3 py-1.5 rounded-lg bg-[#872bf5] hover:bg-[#7417e3] text-white shadow-md transition hover:scale-105 active:scale-95"
+                >
+                  Auto-Filled ✨
+                </button>
+              </div>
             </div>
           )}
 
@@ -237,18 +261,31 @@ export default function Signup() {
               />
             </div>
 
-            {/* Email with Verification Code (Anti-Bot) */}
+            {/* Email Address */}
             <div>
-              <label className="block text-xs font-bold text-zinc-300 mb-1.5">
-                Email Address (Anti-Bot Verification)
-              </label>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-xs font-bold text-zinc-300">
+                  Email Address (Anti-Bot Protection)
+                </label>
+                {email.trim() && (
+                  <span className="text-[10px] text-purple-300 font-semibold">
+                    Code will appear below
+                  </span>
+                )}
+              </div>
+
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <input
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (!otpSent && e.target.value.includes("@")) {
+                        setOtpSent(true);
+                      }
+                    }}
                     required
                     className="w-full bg-[#181824] border border-white/10 rounded-2xl pl-9 pr-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-[#872bf5] transition"
                   />
@@ -257,30 +294,44 @@ export default function Signup() {
 
                 <button
                   type="button"
-                  onClick={handleSendOtp}
+                  onClick={() => handleSendOtp()}
                   disabled={otpLoading || !email.trim()}
-                  className="bg-[#872bf5] hover:bg-[#7417e3] disabled:opacity-40 text-white font-bold text-xs px-4 py-3 rounded-2xl transition flex items-center gap-1 shrink-0"
+                  className="bg-[#872bf5] hover:bg-[#7417e3] disabled:opacity-40 text-white font-bold text-xs px-4 py-3 rounded-2xl transition flex items-center gap-1.5 shrink-0 hover:scale-105 active:scale-95"
                 >
-                  {otpLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <span>{otpSent ? "Resend" : "Send OTP"}</span>}
+                  {otpLoading ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>{previewOtp ? "New Code" : "Get Code"}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* 6-Digit OTP Box (Shows once OTP is requested) */}
-            {otpSent && (
-              <div className="space-y-1.5 animate-fade-in">
-                <label className="block text-xs font-bold text-purple-300">
-                  Enter 6-Digit Email Code
-                </label>
+            {/* 6-Digit Code Input Box (Visible as soon as email is entered or code requested) */}
+            {(otpSent || email.length > 0) && (
+              <div className="space-y-1.5 animate-fade-in p-3 rounded-2xl bg-[#181824]/60 border border-[#872bf5]/30">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-[#872bf5]" />
+                    <span>6-Digit Verification Code</span>
+                  </label>
+                  {previewOtp && (
+                    <span className="text-[10px] text-[#00e676] font-bold">✓ Code Filled</span>
+                  )}
+                </div>
+
                 <div className="relative">
                   <input
                     type="text"
                     maxLength={6}
-                    placeholder="123456"
+                    placeholder="e.g. 849201"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                     required
-                    className="w-full bg-[#181824] border border-[#872bf5] rounded-2xl pl-9 pr-4 py-3 text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-[#872bf5] transition"
+                    className="w-full bg-[#121218] border border-[#872bf5]/50 focus:border-[#872bf5] rounded-xl pl-9 pr-4 py-3 text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-[#872bf5]/40 transition"
                   />
                   <KeyRound className="w-4 h-4 text-purple-400 absolute left-3 top-3.5" />
                 </div>
@@ -322,7 +373,7 @@ export default function Signup() {
               className="w-full bg-[#872bf5] hover:bg-[#7417e3] text-white font-black py-3.5 rounded-2xl text-xs transition shadow-xl shadow-[#872bf5]/40 flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-105 active:scale-95"
             >
               {loading ? (
-                <span>Verifying & Entering...</span>
+                <span>Entering Room...</span>
               ) : (
                 <>
                   <span>Enter One Hour Friend</span>
