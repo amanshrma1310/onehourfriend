@@ -65,12 +65,23 @@ export function verifyOtp(email: string, inputCode: string): { valid: boolean; e
 
 // Create Nodemailer Transporter using Environment SMTP, Hostinger or Gmail
 function getTransporter() {
-  const user = process.env.SMTP_USER || process.env.EMAIL_USER || process.env.GMAIL_USER;
-  const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.GMAIL_APP_PASS;
-  const host = process.env.SMTP_HOST || (user?.includes("@gmail.com") ? "smtp.gmail.com" : "smtp.hostinger.com");
-  const port = parseInt(process.env.SMTP_PORT || "465", 10);
+  const rawUser = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
+  const rawPass = process.env.GMAIL_APP_PASS || process.env.SMTP_PASS || process.env.EMAIL_PASS;
 
-  if (user && pass) {
+  if (rawUser && rawPass) {
+    const user = rawUser.trim();
+    const pass = rawPass.replace(/\s+/g, "").trim();
+
+    if (user.includes("@gmail.com")) {
+      return nodemailer.createTransport({
+        service: "gmail",
+        auth: { user, pass },
+      });
+    }
+
+    const host = process.env.SMTP_HOST || "smtp.hostinger.com";
+    const port = parseInt(process.env.SMTP_PORT || "465", 10);
+
     return nodemailer.createTransport({
       host,
       port,
