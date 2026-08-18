@@ -109,19 +109,22 @@ export default function Dashboard() {
     };
   }, []);
 
+  const dismissedSignalIdsRef = useRef<Set<string>>(new Set());
+
   // Global Incoming Call Listener across all tabs and rooms
   useEffect(() => {
     if (!currentUser || activeCall) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/call/signal?checkIncoming=true&since=${lastSignalCheckRef.current}`);
+        const res = await fetch("/api/call/signal?checkIncoming=true");
         const data = await res.json();
         if (data.signals && data.signals.length > 0) {
           for (const s of data.signals) {
-            lastSignalCheckRef.current = s.timestamp || Date.now();
+            if (dismissedSignalIdsRef.current.has(s.id)) continue;
             if (s.type === "CALL_RING") {
               setIncomingCall({
+                signalId: s.id,
                 roomId: s.roomId,
                 partnerUserId: s.senderId,
                 partnerName: s.payload?.callerName || "Friend",
@@ -137,9 +140,11 @@ export default function Dashboard() {
               setIncomingCall(null);
             }
           }
+        } else {
+          setIncomingCall(null);
         }
       } catch {}
-    }, 1500);
+    }, 1200);
 
     return () => clearInterval(interval);
   }, [currentUser, activeCall]);
@@ -392,11 +397,14 @@ export default function Dashboard() {
 
   async function declineIncomingCall() {
     if (incomingCall) {
+      if (incomingCall.signalId) {
+        dismissedSignalIdsRef.current.add(incomingCall.signalId);
+      }
       try {
         await fetch("/api/call/signal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId: incomingCall.roomId, targetUserId: incomingCall.partnerUserId, type: "HANGUP" }),
+          body: JSON.stringify({ roomId: incomingCall.roomId, targetUserId: incomingCall.partnerUserId, type: "CALL_DECLINE" }),
         });
       } catch {}
     }

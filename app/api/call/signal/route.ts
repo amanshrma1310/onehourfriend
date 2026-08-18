@@ -24,7 +24,27 @@ export async function POST(req: Request) {
     const signalId = randomUUID();
     const nowMs = Date.now();
 
-    // Insert signal into CallSignal
+    // 1. If Hangup, Decline, or Accept, purge previous CALL_RING signals so popup disappears instantly
+    if (type === "HANGUP" || type === "CALL_DECLINE" || type === "CALL_ACCEPT") {
+      try {
+        await prisma.$executeRawUnsafe(
+          "DELETE FROM `CallSignal` WHERE `roomId` = ? AND `type` = 'CALL_RING'",
+          roomId
+        );
+      } catch {}
+    }
+
+    // 2. If Hangup, delete all stale candidate/offer signals for this room
+    if (type === "HANGUP") {
+      try {
+        await prisma.$executeRawUnsafe(
+          "DELETE FROM `CallSignal` WHERE `roomId` = ? AND `type` != 'HANGUP'",
+          roomId
+        );
+      } catch {}
+    }
+
+    // 3. Insert new signal
     try {
       await prisma.$executeRawUnsafe(
         "INSERT INTO `CallSignal` (`id`, `roomId`, `senderId`, `targetUserId`, `type`, `payload`, `timestamp`, `createdAt`) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3))",
@@ -48,12 +68,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Clean up signals older than 3 minutes
-    const threeMinsAgoMs = nowMs - 3 * 60 * 1000;
+    // Clean up signals older than 2 minutes
+    const twoMinsAgoMs = nowMs - 2 * 60 * 1000;
     try {
       await prisma.$executeRawUnsafe(
         "DELETE FROM `CallSignal` WHERE `timestamp` < ?",
-        threeMinsAgoMs
+        twoMinsAgoMs
       );
     } catch {}
 
@@ -78,8 +98,8 @@ export async function GET(req: Request) {
     const checkIncoming = url.searchParams.get("checkIncoming");
 
     const now = Date.now();
-    // Use server-side relative window (last 45 seconds) to eliminate any device clock skew!
-    const activeWindowMs = now - 45 * 1000;
+    // Sliding 30s window for real-time signaling
+    const activeWindowMs = now - 30 * 1000;
 
     let rows: any[] = [];
 

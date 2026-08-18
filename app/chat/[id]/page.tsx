@@ -54,6 +54,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
   const [activeCall, setActiveCall] = useState<any>(null);
   const [incomingCall, setIncomingCall] = useState<any>(null);
   const lastSignalCheckRef = useRef<number>(Date.now() - 5000);
+  const dismissedSignalIdsRef = useRef<Set<string>>(new Set());
 
   // Modals & UI States
   const [showToolbox, setShowToolbox] = useState(false);
@@ -197,13 +198,14 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
 
       // Check for incoming call signals
       if (!activeCall) {
-        const sigRes = await fetch(`/api/call/signal?roomId=session_${sessionId}&since=${lastSignalCheckRef.current}`);
+        const sigRes = await fetch(`/api/call/signal?roomId=session_${sessionId}`);
         const sigData = await sigRes.json();
         if (sigData.signals && sigData.signals.length > 0) {
           for (const s of sigData.signals) {
-            lastSignalCheckRef.current = s.timestamp || Date.now();
+            if (dismissedSignalIdsRef.current.has(s.id)) continue;
             if (s.type === "CALL_RING") {
               setIncomingCall({
+                signalId: s.id,
                 roomId: `session_${sessionId}`,
                 partnerUserId: partner?.id,
                 partnerName: partner?.username || "Partner",
@@ -219,6 +221,8 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               setIncomingCall(null);
             }
           }
+        } else {
+          setIncomingCall(null);
         }
       }
       // Check for incoming friend request from partner
@@ -320,11 +324,14 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
 
   async function declineIncomingCall() {
     if (incomingCall) {
+      if (incomingCall.signalId) {
+        dismissedSignalIdsRef.current.add(incomingCall.signalId);
+      }
       try {
         await fetch("/api/call/signal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId: incomingCall.roomId, type: "HANGUP" }),
+          body: JSON.stringify({ roomId: incomingCall.roomId, targetUserId: partner?.id, type: "CALL_DECLINE" }),
         });
       } catch {}
     }

@@ -34,6 +34,15 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: "stun:stun4.l.google.com:19302" },
     { urls: "stun:stun.services.mozilla.com" },
     { urls: "stun:stun.cloudflare.com:3478" },
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp",
+      ],
+      username: "openrelay",
+      credential: "openrelay",
+    },
   ],
   iceCandidatePoolSize: 10,
 };
@@ -82,6 +91,7 @@ export default function VideoCallModal({
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const pollIntervalRef = useRef<any>(null);
   const ringIntervalRef = useRef<any>(null);
   const heartbeatIntervalRef = useRef<any>(null);
@@ -162,6 +172,10 @@ export default function VideoCallModal({
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
+    }
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach((track) => track.stop());
+      remoteStreamRef.current = null;
     }
     if (pcRef.current) {
       try {
@@ -246,7 +260,7 @@ export default function VideoCallModal({
       localVideoRef.current.srcObject = stream;
     }
 
-    // Create RTCPeerConnection with STUN pool
+    // Create RTCPeerConnection with STUN & TURN pool
     const pc = new RTCPeerConnection(ICE_SERVERS);
     pcRef.current = pc;
 
@@ -255,11 +269,19 @@ export default function VideoCallModal({
 
     // Handle remote incoming track
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-        remoteVideoRef.current.play().catch(() => {});
-        setCallState("CONNECTED");
+      console.log("[WebRTC remote track received]:", event.track.kind, event.streams);
+      if (event.streams && event.streams[0]) {
+        remoteStreamRef.current = event.streams[0];
+      } else {
+        if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream();
+        remoteStreamRef.current.addTrack(event.track);
       }
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        remoteVideoRef.current.play().catch((e) => console.log("Remote play:", e));
+      }
+      setCallState("CONNECTED");
     };
 
     // Handle ICE Candidates
@@ -269,7 +291,17 @@ export default function VideoCallModal({
       }
     };
 
+    pc.oniceconnectionstatechange = () => {
+      console.log("[WebRTC ICE State]:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        setCallState("CONNECTED");
+      } else if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
+        setCallState("ENDED");
+      }
+    };
+
     pc.onconnectionstatechange = () => {
+      console.log("[WebRTC Connection State]:", pc.connectionState);
       if (pc.connectionState === "connected") {
         setCallState("CONNECTED");
       } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
@@ -320,7 +352,7 @@ export default function VideoCallModal({
     };
   }, [isInitiator, callState, currentUserName, currentUserAvatar, isVideoCall, sendSignal]);
 
-  // Signaling Polling Loop
+  // Signaling Polling Loop (Fast 400ms for immediate sub-second handshake)
   useEffect(() => {
     initCall();
 
@@ -371,17 +403,15 @@ export default function VideoCallModal({
               }
             } else if (signal.type === "HANGUP" || signal.type === "CALL_DECLINE") {
               setCallState("ENDED");
-              setTimeout(() => {
-                handleCleanClose();
-                onClose();
-              }, 800);
+              handleCleanClose();
+              onClose();
             }
           }
         }
       } catch (err) {
         console.error("Poll signal error:", err);
       }
-    }, 1000);
+    }, 400);
 
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -423,9 +453,7 @@ export default function VideoCallModal({
     sendSignal("HANGUP");
     setCallState("ENDED");
     handleCleanClose();
-    setTimeout(() => {
-      onClose();
-    }, 300);
+    onClose();
   };
 
   const formatTimer = (seconds: number) => {
