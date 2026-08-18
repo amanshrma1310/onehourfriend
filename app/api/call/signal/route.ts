@@ -22,25 +22,27 @@ export async function POST(req: Request) {
 
     const payloadStr = typeof payload === "string" ? payload : JSON.stringify(payload);
     const signalId = randomUUID();
+    const nowMs = Date.now();
 
     // Insert signal into CallSignal
     await prisma.$executeRawUnsafe(
-      "INSERT INTO `CallSignal` (`id`, `roomId`, `senderId`, `type`, `payload`, `createdAt`) VALUES (?, ?, ?, ?, ?, NOW(3))",
+      "INSERT INTO `CallSignal` (`id`, `roomId`, `senderId`, `type`, `payload`, `timestamp`, `createdAt`) VALUES (?, ?, ?, ?, ?, ?, NOW(3))",
       signalId,
       roomId,
       user.id,
       type,
-      payloadStr
+      payloadStr,
+      nowMs
     );
 
     // Clean up signals older than 5 minutes
-    const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const fiveMinsAgoMs = nowMs - 5 * 60 * 1000;
     await prisma.$executeRawUnsafe(
-      "DELETE FROM `CallSignal` WHERE `createdAt` < ?",
-      fiveMinsAgo
+      "DELETE FROM `CallSignal` WHERE `timestamp` < ?",
+      fiveMinsAgoMs
     );
 
-    return NextResponse.json({ success: true, signalId });
+    return NextResponse.json({ success: true, signalId, timestamp: nowMs });
   } catch (error: any) {
     console.error("Signal POST error:", error);
     return NextResponse.json({ error: error.message || "Failed to send signal" }, { status: 500 });
@@ -61,22 +63,23 @@ export async function GET(req: Request) {
     const since = url.searchParams.get("since");
     const checkIncoming = url.searchParams.get("checkIncoming");
 
-    let sinceDate: Date;
+    const now = Date.now();
+    let sinceMs: number = now - 30 * 1000;
     if (since) {
       const parsed = parseInt(since, 10);
-      sinceDate = !isNaN(parsed) ? new Date(parsed) : new Date(Date.now() - 30 * 1000);
-    } else {
-      sinceDate = new Date(Date.now() - 30 * 1000);
+      if (!isNaN(parsed) && parsed > 0) {
+        sinceMs = parsed;
+      }
     }
 
     let rows: any[] = [];
 
     if (roomId) {
       rows = await prisma.$queryRawUnsafe(
-        "SELECT `id`, `roomId`, `senderId`, `type`, `payload`, `createdAt` FROM `CallSignal` WHERE `roomId` = ? AND `senderId` != ? AND `createdAt` > ? ORDER BY `createdAt` ASC LIMIT 50",
+        "SELECT `id`, `roomId`, `senderId`, `type`, `payload`, `timestamp`, `createdAt` FROM `CallSignal` WHERE `roomId` = ? AND `senderId` != ? AND `timestamp` > ? ORDER BY `timestamp` ASC LIMIT 50",
         roomId,
         user.id,
-        sinceDate
+        sinceMs
       );
     } else if (checkIncoming === "true") {
       // Find all friendships for this user
@@ -104,8 +107,8 @@ export async function GET(req: Request) {
 
       if (roomIds.length > 0) {
         const placeholders = roomIds.map(() => "?").join(",");
-        const query = `SELECT \`id\`, \`roomId\`, \`senderId\`, \`type\`, \`payload\`, \`createdAt\` FROM \`CallSignal\` WHERE \`roomId\` IN (${placeholders}) AND \`senderId\` != ? AND \`type\` = 'CALL_RING' AND \`createdAt\` > ? ORDER BY \`createdAt\` DESC LIMIT 10`;
-        rows = await prisma.$queryRawUnsafe(query, ...roomIds, user.id, sinceDate);
+        const query = `SELECT \`id\`, \`roomId\`, \`senderId\`, \`type\`, \`payload\`, \`timestamp\`, \`createdAt\` FROM \`CallSignal\` WHERE \`roomId\` IN (${placeholders}) AND \`senderId\` != ? AND \`type\` = 'CALL_RING' AND \`timestamp\` > ? ORDER BY \`timestamp\` DESC LIMIT 10`;
+        rows = await prisma.$queryRawUnsafe(query, ...roomIds, user.id, sinceMs);
       }
     }
 
@@ -122,6 +125,7 @@ export async function GET(req: Request) {
         senderId: row.senderId,
         type: row.type,
         payload: parsedPayload,
+        timestamp: Number(row.timestamp || 0),
         createdAt: row.createdAt,
       };
     });

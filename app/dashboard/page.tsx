@@ -1014,24 +1014,40 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* Direct Message Input Form (Fully Clickable & Never Blocked) */}
-                <form onSubmit={handleSendFriendMessage} className="p-4 border-t border-white/10 bg-[#181824] flex items-center gap-3 relative z-30">
-                  <input
-                    type="text"
-                    placeholder={`Message ${activeFriendUser?.username || "friend"}...`}
-                    value={newFriendMessage}
-                    onChange={(e) => setNewFriendMessage(e.target.value)}
-                    className="flex-1 bg-[#121218] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#872bf5]"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newFriendMessage.trim()}
-                    className="bg-[#872bf5] text-white font-extrabold px-6 py-3 rounded-2xl text-xs hover:bg-[#7417e3] transition flex items-center gap-1.5 shadow-lg shadow-[#872bf5]/30 hover:scale-105 active:scale-95 disabled:opacity-40"
-                  >
-                    <span>Send</span>
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </form>
+                {/* Direct Message Input Form with Quick Emoji Bar */}
+                <div className="p-4 border-t border-white/10 bg-[#181824] space-y-2 relative z-30">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 shrink-0 mr-1">Quick:</span>
+                    {["❤️", "😂", "🔥", "✨", "👏", "🥺", "👍", "☕", "🕊️", "🙌"].map((emoji, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setNewFriendMessage((prev) => prev + emoji)}
+                        className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-[#872bf5]/30 hover:scale-110 transition flex items-center justify-center text-xs shrink-0"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleSendFriendMessage} className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      placeholder={`Message ${activeFriendUser?.username || "friend"}...`}
+                      value={newFriendMessage}
+                      onChange={(e) => setNewFriendMessage(e.target.value)}
+                      className="flex-1 bg-[#121218] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-[#872bf5]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newFriendMessage.trim()}
+                      className="bg-[#872bf5] text-white font-extrabold px-6 py-3 rounded-2xl text-xs hover:bg-[#7417e3] transition flex items-center gap-1.5 shadow-lg shadow-[#872bf5]/30 hover:scale-105 active:scale-95 disabled:opacity-40"
+                    >
+                      <span>Send</span>
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                </div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-zinc-400">

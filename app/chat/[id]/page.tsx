@@ -22,6 +22,9 @@ import {
   CheckCheck,
   Phone,
   Video,
+  Smile,
+  LogOut,
+  ChevronDown,
 } from "lucide-react";
 
 import VideoCallModal from "@/components/VideoCallModal";
@@ -46,10 +49,12 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
   const [incomingCall, setIncomingCall] = useState<any>(null);
   const lastSignalCheckRef = useRef<number>(Date.now() - 5000);
 
-  // Modals
+  // Modals & UI States
   const [showToolbox, setShowToolbox] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
   const [reportReason, setReportReason] = useState("UNWANTED_FLIRT");
   const [reportDesc, setReportDesc] = useState("");
 
@@ -61,9 +66,16 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
   const [partnerKeptDecision, setPartnerKeptDecision] = useState(false);
   const [mutualKeep, setMutualKeep] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Scrolling references
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
+  const isNearBottomRef = useRef(true);
+  const initialScrollDoneRef = useRef(false);
+
   const pollTimerRef = useRef<any>(null);
   const countdownTimerRef = useRef<any>(null);
+
+  const POPULAR_EMOJIS = ["❤️", "😂", "🔥", "✨", "👏", "🥺", "👍", "☕", "🕊️", "🙌", "💯", "🌸"];
 
   useEffect(() => {
     loadSession();
@@ -73,6 +85,39 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
   }, [sessionId]);
+
+  // Smart Scrolling handler
+  function handleChatScroll() {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    const isNear = distanceToBottom < 120;
+    isNearBottomRef.current = isNear;
+    setShowScrollBottomBtn(!isNear);
+  }
+
+  function scrollToBottom(behavior: ScrollBehavior = "smooth") {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior,
+      });
+      setShowScrollBottomBtn(false);
+      isNearBottomRef.current = true;
+    }
+  }
+
+  // Scroll to bottom on messages update ONLY if user is already near bottom
+  useEffect(() => {
+    if (messages.length > 0) {
+      if (!initialScrollDoneRef.current) {
+        scrollToBottom("auto");
+        initialScrollDoneRef.current = true;
+      } else if (isNearBottomRef.current) {
+        scrollToBottom("smooth");
+      }
+    }
+  }, [messages]);
 
   async function loadSession() {
     try {
@@ -143,7 +188,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         const sigData = await sigRes.json();
         if (sigData.signals && sigData.signals.length > 0) {
           for (const s of sigData.signals) {
-            lastSignalCheckRef.current = new Date(s.createdAt).getTime();
+            lastSignalCheckRef.current = s.timestamp || Date.now();
             if (s.type === "CALL_RING") {
               setIncomingCall({
                 roomId: `session_${sessionId}`,
@@ -151,7 +196,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
                 partnerAvatar: partner?.avatar || "🌙",
                 isVideo: s.payload?.isVideo !== false,
               });
-            } else if (s.type === "HANGUP") {
+            } else if (s.type === "HANGUP" || s.type === "CALL_DECLINE") {
               setIncomingCall(null);
             }
           }
@@ -204,20 +249,19 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
     setIncomingCall(null);
   }
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
+    const content = newMessage.trim();
+    setNewMessage("");
+
     try {
       const res = await fetch(`/api/session/${sessionId}/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newMessage.trim(), type: "TEXT" }),
+        body: JSON.stringify({ content, type: "TEXT" }),
       });
 
       const data = await res.json();
@@ -225,12 +269,33 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         alert(data.error || "Failed to send message");
       } else if (data.message) {
         setMessages((prev) => [...prev, data.message]);
-        setNewMessage("");
+        setTimeout(() => scrollToBottom("smooth"), 50);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setSending(false);
+    }
+  }
+
+  function handleAddEmoji(emoji: string) {
+    setNewMessage((prev) => prev + emoji);
+  }
+
+  async function handleSendQuickReaction(emoji: string) {
+    try {
+      const res = await fetch(`/api/session/${sessionId}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: emoji, type: "TEXT" }),
+      });
+      const data = await res.json();
+      if (data.message) {
+        setMessages((prev) => [...prev, data.message]);
+        setTimeout(() => scrollToBottom("smooth"), 50);
+      }
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -248,6 +313,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
       const data = await res.json();
       if (data.message) {
         setMessages((prev) => [...prev, data.message]);
+        setTimeout(() => scrollToBottom("smooth"), 50);
       }
     } catch (e) {
       console.error(e);
@@ -263,6 +329,13 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         origin: { y: 0.6 },
       });
     } catch {}
+  }
+
+  async function handleInstantExit() {
+    try {
+      await fetch(`/api/session/${sessionId}/end`, { method: "POST" });
+    } catch {}
+    router.push("/dashboard");
   }
 
   async function submitDecision(keep: boolean) {
@@ -349,7 +422,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
       <div className="min-h-screen bg-[#872bf5] flex items-center justify-center text-white">
         <div className="flex items-center gap-3">
           <div className="w-5 h-5 rounded-full bg-white animate-ping" />
-          <span className="text-sm font-black">Entering 60-Minute Room...</span>
+          <span className="text-sm font-black">Joining 60-Minute Room...</span>
         </div>
       </div>
     );
@@ -357,44 +430,46 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#121218] flex flex-col items-center justify-center p-6 text-center text-white">
-        <AlertTriangle className="w-12 h-12 text-[#872bf5] mb-4" />
-        <h2 className="text-xl font-bold mb-2">Room Unavailable</h2>
-        <p className="text-xs text-zinc-400 max-w-sm mb-6">{error}</p>
-        <Link
-          href="/dashboard"
-          className="bg-[#872bf5] text-white px-6 py-2.5 rounded-full text-xs font-black"
-        >
-          Return to Dashboard
-        </Link>
+      <div className="min-h-screen bg-[#121218] flex items-center justify-center p-6 text-white text-center">
+        <div className="max-w-md bg-[#181824] border border-white/10 p-8 rounded-3xl space-y-4">
+          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto" />
+          <h2 className="text-xl font-bold">Room Unavailable</h2>
+          <p className="text-xs text-zinc-400">{error}</p>
+          <Link
+            href="/dashboard"
+            className="inline-block bg-[#872bf5] hover:bg-[#7417e3] text-white font-bold px-6 py-2.5 rounded-xl text-xs"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <main className="h-screen flex bg-[#121218] text-white overflow-hidden selection:bg-[#872bf5] selection:text-white">
-      {/* MAIN CHAT STREAM (Exact Style from Screenshot) */}
-      <section className="flex-1 flex flex-col h-full border-r border-white/10 bg-[#121218]">
-        {/* Header from Screenshot: Partner Avatar, Name, ● Active, Call Icons */}
-        <header className="border-b border-white/10 bg-[#181824] px-6 py-3.5 flex items-center justify-between z-20 shrink-0">
-          <div className="flex items-center gap-3">
+      {/* MAIN CHAT STREAM */}
+      <section className="flex-1 flex flex-col h-full border-r border-white/10 bg-[#121218] min-w-0">
+        {/* Header Strip */}
+        <header className="border-b border-white/10 bg-[#181824] px-4 md:px-6 py-3 flex items-center justify-between z-20 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/dashboard"
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition shrink-0"
               title="Back to Dashboard"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <span className="text-3xl">{partner?.avatar || "👨‍💻"}</span>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative shrink-0">
+                <span className="text-2xl md:text-3xl">{partner?.avatar || "👨‍💻"}</span>
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#00e676] ring-2 ring-[#181824]" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-white">{partner?.username || "Friend"}</span>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#872bf5]/25 text-purple-200">
+                  <span className="text-sm font-black text-white truncate">{partner?.username || "Friend"}</span>
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#872bf5]/25 text-purple-200 shrink-0 hidden sm:inline-block">
                     {currentZone.emoji} {currentZone.name}
                   </span>
                 </div>
@@ -406,10 +481,10 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-2 md:gap-2.5 shrink-0">
             {/* Live 60-Minute Countdown Clock */}
             <div
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-mono font-black shadow-md ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono font-black shadow-md ${
                 remainingSeconds < 300
                   ? "bg-red-500/20 border-red-500 text-red-400 animate-pulse"
                   : remainingSeconds < 600
@@ -421,57 +496,55 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               <span>{timerStr}</span>
             </div>
 
-            {/* Video Call Trigger */}
+            {/* Video Call Button (Prominent) */}
             <button
               onClick={() => startVideoCall(true)}
-              className="p-2 rounded-xl bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold flex items-center gap-1.5 transition shadow-md shadow-[#872bf5]/40 hover:scale-105 active:scale-95"
-              title="Start 1-on-1 Video Call"
+              className="p-2 md:px-3.5 md:py-2 rounded-xl bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-[#872bf5]/40 hover:scale-105 active:scale-95"
+              title="Start Live 1-on-1 Video Call"
             >
               <Video className="w-4 h-4 fill-white" />
-              <span className="hidden sm:inline">Video Call</span>
+              <span className="hidden md:inline">Video Call</span>
             </button>
 
-            {/* Voice Call Trigger */}
+            {/* Voice Call Button */}
             <button
               onClick={() => startVideoCall(false)}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold transition"
               title="Start Voice Call"
             >
               <Phone className="w-4 h-4" />
             </button>
 
+            {/* Prompts button */}
             <button
               onClick={() => setShowToolbox(true)}
               className="p-2 rounded-xl bg-[#872bf5]/20 hover:bg-[#872bf5]/30 border border-[#872bf5]/40 text-purple-200 text-xs font-bold flex items-center gap-1.5 transition"
               title="Conversation Prompts"
             >
               <Sparkles className="w-4 h-4" />
-              <span className="hidden md:inline">Prompts</span>
             </button>
 
+            {/* Exit / Skip Room Button (Prominent) */}
             <button
-              onClick={() => setShowReportModal(true)}
-              title="Report"
-              className="p-2 rounded-xl bg-white/5 hover:bg-amber-500/20 text-zinc-400 hover:text-amber-400 transition"
+              onClick={() => setShowExitConfirmModal(true)}
+              className="p-2 px-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 hover:text-red-200 border border-red-500/30 text-xs font-bold flex items-center gap-1.5 transition hover:scale-105 active:scale-95"
+              title="Leave / Exit Conversation"
             >
-              <Flag className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => setShowBlockModal(true)}
-              title="Panic Exit & Block"
-              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition"
-            >
-              <Ban className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Exit Room</span>
             </button>
           </div>
         </header>
 
-        {/* Message Stream */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 max-w-4xl mx-auto w-full">
+        {/* Scrollable Message Viewport with Smart Scroll Detection */}
+        <div
+          ref={chatContainerRef}
+          onScroll={handleChatScroll}
+          className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full relative min-h-0"
+        >
           <div className="text-center py-2">
             <span className="text-[11px] font-bold text-zinc-500 px-3 py-1 rounded-full bg-white/5">
-              Today
+              60-Minute Encrypted Session
             </span>
           </div>
 
@@ -514,7 +587,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
                 )}
 
                 <div
-                  className={`max-w-md md:max-w-lg p-4 rounded-3xl text-xs leading-relaxed ${
+                  className={`max-w-md md:max-w-lg p-3.5 md:p-4 rounded-3xl text-xs leading-relaxed ${
                     isMe
                       ? "bg-[#872bf5] text-white font-medium rounded-br-none shadow-lg shadow-[#872bf5]/25"
                       : "bg-[#20202c] text-white rounded-bl-none border border-white/5 shadow-md"
@@ -542,19 +615,46 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               </div>
             );
           })}
-          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Bar */}
-        <footer className="border-t border-white/10 bg-[#181824] p-4 max-w-4xl mx-auto w-full shrink-0">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2.5 bg-[#121218] border border-white/10 rounded-2xl p-1.5 pl-3">
+        {/* Floating Jump to Latest Button (Appears when scrolled up) */}
+        {showScrollBottomBtn && (
+          <button
+            onClick={() => scrollToBottom("smooth")}
+            className="fixed bottom-28 right-8 z-30 bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold py-2 px-4 rounded-full shadow-2xl flex items-center gap-1.5 transition hover:scale-105 active:scale-95 animate-bounce"
+          >
+            <ChevronDown className="w-4 h-4" />
+            <span>Latest Messages</span>
+          </button>
+        )}
+
+        {/* Footer with Quick Emoji Bar & Message Input */}
+        <footer className="border-t border-white/10 bg-[#181824] p-3 md:p-4 max-w-4xl mx-auto w-full shrink-0 space-y-2.5 z-20">
+          {/* Quick 1-Tap Emoji Reaction Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+            <span className="text-[10px] uppercase font-bold text-zinc-500 shrink-0 mr-1">Quick:</span>
+            {POPULAR_EMOJIS.map((emoji, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleAddEmoji(emoji)}
+                className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-[#872bf5]/30 hover:scale-125 transition flex items-center justify-center text-sm shrink-0 active:scale-95"
+                title={`Add ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
+          {/* Input Form */}
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#121218] border border-white/10 rounded-2xl p-1.5 pl-3">
             <button
               type="button"
               onClick={() => setShowToolbox(true)}
-              className="p-2 rounded-xl text-purple-300 hover:text-white hover:bg-white/5 transition"
-              title="Conversation Prompts"
+              className="p-2 rounded-xl text-purple-300 hover:text-white hover:bg-white/5 transition shrink-0"
+              title="Conversation Starters"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
             </button>
 
             <input
@@ -569,7 +669,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
             <button
               type="submit"
               disabled={sending || !newMessage.trim() || isCompleted}
-              className="bg-[#872bf5] hover:bg-[#7417e3] text-white font-black px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-[#872bf5]/30 flex items-center gap-1.5 disabled:opacity-40"
+              className="bg-[#872bf5] hover:bg-[#7417e3] text-white font-black px-4 md:px-5 py-2.5 rounded-xl text-xs transition shadow-lg shadow-[#872bf5]/30 flex items-center gap-1.5 disabled:opacity-40 shrink-0"
             >
               <span>Send</span>
               <Send className="w-3.5 h-3.5 fill-white" />
@@ -578,7 +678,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         </footer>
       </section>
 
-      {/* RIGHT SIDEBAR (Profile, Keep Friendship) */}
+      {/* RIGHT SIDEBAR (Profile, Safety & Exit Options) */}
       <aside className="hidden lg:flex flex-col w-80 bg-[#181824] border-l border-white/10 p-6 space-y-6 overflow-y-auto shrink-0">
         <div className="text-center space-y-3 pt-2">
           <div className="relative inline-block">
@@ -597,9 +697,16 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
 
           <div className="flex items-center justify-center gap-2 pt-1">
             <button
+              onClick={() => startVideoCall(true)}
+              className="p-2.5 rounded-xl bg-[#872bf5] hover:bg-[#7417e3] text-white transition shadow-md shadow-[#872bf5]/30"
+              title="Start Video Call"
+            >
+              <Video className="w-4 h-4 fill-white" />
+            </button>
+            <button
               onClick={() => setShowReportModal(true)}
               className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition"
-              title="Report"
+              title="Report User"
             >
               <Flag className="w-4 h-4" />
             </button>
@@ -616,7 +723,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         <div className="space-y-4 pt-2 border-t border-white/10 text-xs">
           <div>
             <div className="text-[10px] uppercase font-black tracking-wider text-zinc-400 mb-1.5">
-              Room Rules
+              Room Category
             </div>
             <div className="p-3.5 rounded-2xl bg-[#121218] border border-white/5 text-[11px] text-zinc-300 leading-relaxed font-medium">
               🛡️ <strong>{currentZone.badge}</strong>: Respect boundaries, maintain anonymity, and keep the space supportive.
@@ -634,49 +741,44 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         </div>
 
         <div className="pt-auto mt-auto border-t border-white/10 pt-4 space-y-3">
-          <div className="text-[11px] text-zinc-400 text-center font-medium">
-            Like this conversation? Choose to stay connected permanently.
-          </div>
-
           <button
-            onClick={() => submitDecision(true)}
-            className={`w-full py-3.5 rounded-2xl font-black text-xs transition flex items-center justify-center gap-2 ${
-              myKeptDecision
-                ? "bg-[#872bf5] text-white shadow-lg shadow-[#872bf5]/40"
-                : "bg-[#872bf5] hover:bg-[#7417e3] text-white shadow-xl shadow-[#872bf5]/30"
-            }`}
+            onClick={() => setShowExitConfirmModal(true)}
+            className="w-full py-3 rounded-2xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 font-bold text-xs flex items-center justify-center gap-2 transition hover:scale-105 active:scale-95"
           >
-            <Heart className={`w-4 h-4 ${myKeptDecision ? "fill-white" : "fill-white"}`} />
-            <span>{myKeptDecision ? "Connection Request Sent ❤️" : "Keep Connection"}</span>
+            <LogOut className="w-4 h-4" />
+            <span>Leave Conversation & Skip</span>
           </button>
         </div>
       </aside>
 
-      {/* ICEBREAKER TOOLBOX MODAL */}
+      {/* CONVERSATION PROMPTS MODAL */}
       {showToolbox && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#181824] border border-white/15 rounded-[32px] p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#181824] border border-white/15 rounded-[32px] p-6 shadow-2xl space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-300" />
-                <h3 className="text-base font-black text-white">Break the Ice Prompts</h3>
+                <Sparkles className="w-4 h-4 text-[#872bf5]" />
+                <h3 className="text-sm font-bold text-white">Conversation Starters</h3>
               </div>
               <button
                 onClick={() => setShowToolbox(false)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-white"
+                className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/5"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-              {icebreakers.map((q, i) => (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {icebreakers.map((questionText, idx) => (
                 <button
-                  key={i}
-                  onClick={() => sendIcebreaker(q)}
-                  className="w-full p-3.5 rounded-2xl bg-[#121218] hover:bg-[#872bf5]/20 border border-white/5 hover:border-[#872bf5]/50 text-left transition text-xs text-zinc-200 font-medium"
+                  key={idx}
+                  onClick={() => sendIcebreaker(questionText)}
+                  className="w-full p-3.5 rounded-2xl bg-[#121218] hover:bg-[#872bf5]/20 border border-white/5 hover:border-[#872bf5]/40 text-left transition group"
                 >
-                  "{q}"
+                  <div className="text-xs font-bold text-white group-hover:text-purple-300">
+                    Prompt #{idx + 1}
+                  </div>
+                  <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">{questionText}</p>
                 </button>
               ))}
             </div>
@@ -684,79 +786,106 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         </div>
       )}
 
+      {/* EXIT CONFIRMATION MODAL */}
+      {showExitConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm bg-[#181824] border border-white/15 rounded-[32px] p-6 text-center space-y-5 shadow-2xl">
+            <div className="w-14 h-14 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center text-2xl mx-auto">
+              <LogOut className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-white">Leave This Room?</h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                You can return to the dashboard and match with someone new right away.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExitConfirmModal(false)}
+                className="flex-1 bg-white/10 hover:bg-white/15 py-3 rounded-2xl text-xs font-bold text-white transition"
+              >
+                Stay
+              </button>
+              <button
+                onClick={handleInstantExit}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-2xl text-xs transition shadow-lg shadow-red-600/30"
+              >
+                Yes, Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SAFETY REPORT MODAL */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className="w-full max-w-md bg-[#181824] border border-white/15 rounded-[32px] p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-                <Flag className="w-5 h-5" />
-                <span>Report User</span>
-              </div>
+              <h3 className="text-sm font-bold text-white">Report User for Safety</h3>
               <button
                 onClick={() => setShowReportModal(false)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-white"
+                className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/5"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div>
-              <label className="block text-zinc-300 font-bold text-xs mb-1.5">Reason</label>
+            <div className="space-y-3">
               <select
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
-                className="w-full bg-[#121218] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#872bf5]"
+                className="w-full bg-[#121218] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
               >
-                <option value="UNWANTED_FLIRT">Unwanted Flirting in Peaceful/Guidance Zone</option>
-                <option value="HARASSMENT">Harassment or Abusive Speech</option>
-                <option value="INAPPROPRIATE">Inappropriate Content</option>
-                <option value="SPAM">Spam or Promotion</option>
-                <option value="OTHER">Other Safety Violation</option>
+                <option value="UNWANTED_FLIRT">Unwanted Flirting / Boundary Violation</option>
+                <option value="HARASSMENT">Harassment or Hate Speech</option>
+                <option value="SPAM">Spam or Self-Promotion</option>
+                <option value="HARMFUL_BEHAVIOR">Harmful Behavior</option>
               </select>
-            </div>
 
-            <div>
-              <label className="block text-zinc-300 font-bold text-xs mb-1.5">Details</label>
               <textarea
                 rows={3}
-                placeholder="What happened..."
+                placeholder="Optional details..."
                 value={reportDesc}
                 onChange={(e) => setReportDesc(e.target.value)}
-                className="w-full bg-[#121218] border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-[#872bf5]"
+                className="w-full bg-[#121218] border border-white/10 rounded-xl p-3 text-xs text-white outline-none"
               />
-            </div>
 
-            <button
-              onClick={submitSafetyReport}
-              className="w-full bg-[#872bf5] hover:bg-[#7417e3] text-white font-black py-3 rounded-xl text-xs transition"
-            >
-              Submit Report
-            </button>
+              <button
+                onClick={submitSafetyReport}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-extrabold py-3 rounded-2xl text-xs transition"
+              >
+                Submit Report
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* PANIC EXIT & BLOCK MODAL */}
+      {/* PANIC BLOCK MODAL */}
       {showBlockModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#181824] border border-red-500/30 rounded-[32px] p-6 shadow-2xl text-center space-y-3">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm bg-[#181824] border border-red-500/40 rounded-[32px] p-6 text-center space-y-4 shadow-2xl">
             <Ban className="w-12 h-12 text-red-400 mx-auto" />
-            <h3 className="text-lg font-black text-white">Instant Panic Exit & Block</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-              This immediately terminates the conversation and permanently blocks <strong>{partner?.username}</strong> from ever matching with you again.
-            </p>
+            <div>
+              <h3 className="text-base font-bold text-white">Panic Block & Exit?</h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                You will never be matched with <strong>{partner?.username}</strong> again.
+              </p>
+            </div>
 
-            <div className="pt-3 flex gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowBlockModal(false)}
-                className="flex-1 border border-white/10 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white"
+                className="flex-1 bg-white/10 text-white font-bold py-2.5 rounded-xl text-xs"
               >
                 Cancel
               </button>
               <button
                 onClick={blockAndExit}
-                className="flex-1 bg-red-500 hover:bg-red-400 text-white font-bold py-2.5 rounded-xl text-xs transition"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs transition"
               >
                 Block & Exit
               </button>
@@ -767,7 +896,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
 
       {/* POST-SESSION COMPLETION MODAL */}
       {isCompleted && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className="w-full max-w-lg bg-[#181824] border border-white/15 rounded-[32px] p-8 shadow-2xl text-center space-y-6">
             <div className="text-4xl">🎉</div>
             <div>

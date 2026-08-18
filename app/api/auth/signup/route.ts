@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, getClientIp, isBotHoneypotTriggered, sanitizeText } from "@/lib/security";
 import { ensureDbTables } from "@/lib/db-init";
+import { verifyOtp } from "@/lib/email-otp";
 
 export async function POST(req: Request) {
   try {
@@ -26,18 +27,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid registration submission" }, { status: 400 });
     }
 
-    const { username, email, password, avatar, activeRole, intent, socialGroup, mood, bio } = body;
+    const { username, email, otp, password, avatar, activeRole, intent, socialGroup, mood, bio } = body;
 
     // 3. Input Sanitization
     const cleanUsername = sanitizeText(username, 30);
     const cleanBio = sanitizeText(bio, 250);
-    const cleanEmail = email ? sanitizeText(email, 100) : null;
+    const cleanEmail = email ? sanitizeText(email, 100).toLowerCase().trim() : null;
 
     if (!cleanUsername || cleanUsername.length < 3) {
       return NextResponse.json(
         { error: "Username must be at least 3 valid alphanumeric characters" },
         { status: 400 }
       );
+    }
+
+    // 4. Email OTP Verification (if email is provided)
+    if (cleanEmail) {
+      if (!otp) {
+        return NextResponse.json(
+          { error: "Please enter the 6-digit email verification code sent to your email" },
+          { status: 400 }
+        );
+      }
+
+      const otpResult = verifyOtp(cleanEmail, otp);
+      if (!otpResult.valid) {
+        return NextResponse.json(
+          { error: otpResult.error || "Invalid verification code" },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if username exists

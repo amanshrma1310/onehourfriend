@@ -202,9 +202,11 @@ const DDL_STATEMENTS = [
     \`senderId\` VARCHAR(191) NOT NULL,
     \`type\` VARCHAR(191) NOT NULL,
     \`payload\` LONGTEXT NOT NULL,
+    \`timestamp\` BIGINT NOT NULL DEFAULT 0,
     \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    INDEX (\`roomId\`, \`createdAt\`),
-    INDEX (\`senderId\`)
+    INDEX (\`roomId\`, \`timestamp\`),
+    INDEX (\`senderId\`),
+    INDEX (\`timestamp\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
 ];
 

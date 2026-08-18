@@ -209,7 +209,7 @@ export default function VideoCallModal({
           for (const signal of data.signals) {
             if (processedSignalIds.current.has(signal.id)) continue;
             processedSignalIds.current.add(signal.id);
-            lastSignalTimeRef.current = new Date(signal.createdAt).getTime();
+            lastSignalTimeRef.current = signal.timestamp || new Date(signal.createdAt).getTime() || Date.now();
 
             const pc = pcRef.current;
 
