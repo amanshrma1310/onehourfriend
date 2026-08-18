@@ -25,9 +25,11 @@ import {
   Smile,
   LogOut,
   ChevronDown,
+  UserPlus,
 } from "lucide-react";
 
 import VideoCallModal from "@/components/VideoCallModal";
+import { requestNotificationPermission, sendBrowserNotification } from "@/lib/notifications";
 
 export default function ChatRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id: sessionId } = use(params);
@@ -43,6 +45,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
 
   // Video / Audio Call State
   const [activeCall, setActiveCall] = useState<any>(null);
@@ -168,6 +171,14 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
         setMessages((prev) => {
           const ids = new Set(prev.map((m) => m.id));
           const fresh = data.messages.filter((m: any) => !ids.has(m.id));
+          if (fresh.length > 0) {
+            const partnerMsg = fresh.find((m: any) => m.userId !== currentUser?.id);
+            if (partnerMsg && document.hidden) {
+              sendBrowserNotification(`New message from ${partner?.username || "Friend"}`, {
+                body: partnerMsg.content,
+              });
+            }
+          }
           return [...prev, ...fresh];
         });
       }
@@ -192,10 +203,16 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
             if (s.type === "CALL_RING") {
               setIncomingCall({
                 roomId: `session_${sessionId}`,
+                partnerUserId: partner?.id,
                 partnerName: partner?.username || "Partner",
                 partnerAvatar: partner?.avatar || "🌙",
                 isVideo: s.payload?.isVideo !== false,
               });
+              if (document.hidden) {
+                sendBrowserNotification(`Incoming ${s.payload?.isVideo !== false ? "Video" : "Voice"} Call`, {
+                  body: `${partner?.username || "Friend"} is calling you!`,
+                });
+              }
             } else if (s.type === "HANGUP" || s.type === "CALL_DECLINE") {
               setIncomingCall(null);
             }
@@ -209,11 +226,13 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
 
   function startVideoCall(isVideo = true) {
     if (!currentUser || !partner) return;
+    requestNotificationPermission();
     setActiveCall({
       roomId: `session_${sessionId}`,
       currentUserId: currentUser.id,
       currentUserName: currentUser.username,
       currentUserAvatar: currentUser.avatar,
+      partnerUserId: partner.id,
       partnerName: partner.username || "Partner",
       partnerAvatar: partner.avatar || "🌙",
       isVideoCall: isVideo,
@@ -228,12 +247,33 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
       currentUserId: currentUser.id,
       currentUserName: currentUser.username,
       currentUserAvatar: currentUser.avatar,
+      partnerUserId: partner.id,
       partnerName: partner.username || "Partner",
       partnerAvatar: partner.avatar || "🌙",
       isVideoCall: incomingCall.isVideo,
       isInitiator: false,
     });
     setIncomingCall(null);
+  }
+
+  async function handleSendFriendRequest() {
+    if (!partner?.id) return;
+    try {
+      const res = await fetch("/api/friends/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: partner.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFriendRequestSent(true);
+        alert(data.message || "🤝 Friend request sent successfully!");
+      } else {
+        alert(data.error || "Could not send friend request");
+      }
+    } catch {
+      alert("Failed to send friend request.");
+    }
   }
 
   async function declineIncomingCall() {
@@ -495,6 +535,21 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
               <Clock className="w-3.5 h-3.5 text-[#872bf5]" />
               <span>{timerStr}</span>
             </div>
+
+            {/* Add Friend Request Button */}
+            <button
+              onClick={handleSendFriendRequest}
+              disabled={friendRequestSent}
+              className={`p-2 md:px-3 md:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                friendRequestSent
+                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                  : "bg-white/5 hover:bg-[#872bf5]/20 text-purple-200 border border-white/10 hover:border-[#872bf5]/40 hover:scale-105 active:scale-95"
+              }`}
+              title="Send Friend Request"
+            >
+              <UserPlus className="w-4 h-4 text-[#00e676]" />
+              <span className="hidden sm:inline">{friendRequestSent ? "Request Sent" : "Add Friend"}</span>
+            </button>
 
             {/* Video Call Button (Prominent) */}
             <button
@@ -1034,6 +1089,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
           currentUserId={activeCall.currentUserId}
           currentUserName={activeCall.currentUserName}
           currentUserAvatar={activeCall.currentUserAvatar}
+          partnerUserId={activeCall.partnerUserId}
           partnerName={activeCall.partnerName}
           partnerAvatar={activeCall.partnerAvatar}
           isVideoCall={activeCall.isVideoCall}

@@ -25,8 +25,13 @@ import {
   Video,
   CheckCheck,
   Flame,
+  UserPlus,
+  Bell,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import VideoCallModal from "@/components/VideoCallModal";
+import { requestNotificationPermission, sendBrowserNotification } from "@/lib/notifications";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -39,6 +44,13 @@ export default function Dashboard() {
   const [activeCall, setActiveCall] = useState<any>(null);
   const [incomingCall, setIncomingCall] = useState<any>(null);
   const lastSignalCheckRef = useRef<number>(Date.now() - 5000);
+
+  // Friend Requests State
+  const [friendRequests, setFriendRequests] = useState<any[]>([]);
+  const [showFriendRequestsModal, setShowFriendRequestsModal] = useState(false);
+  const [showAddFriendModal, setShowAddFriendModal] = useState(false);
+  const [searchFriendUsername, setSearchFriendUsername] = useState("");
+  const [addFriendStatus, setAddFriendStatus] = useState<string | null>(null);
 
   // Category Matchmaker Modal
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -87,6 +99,7 @@ export default function Dashboard() {
   useEffect(() => {
     loadUserData();
     loadFriends();
+    loadFriendRequests();
     loadVentWall();
     loadDailyQuestion();
 
@@ -106,15 +119,21 @@ export default function Dashboard() {
         const data = await res.json();
         if (data.signals && data.signals.length > 0) {
           for (const s of data.signals) {
-            lastSignalCheckRef.current = new Date(s.createdAt).getTime();
+            lastSignalCheckRef.current = s.timestamp || Date.now();
             if (s.type === "CALL_RING") {
               setIncomingCall({
                 roomId: s.roomId,
+                partnerUserId: s.senderId,
                 partnerName: s.payload?.callerName || "Friend",
                 partnerAvatar: s.payload?.callerAvatar || "✨",
                 isVideo: s.payload?.isVideo !== false,
               });
-            } else if (s.type === "HANGUP") {
+              if (document.hidden) {
+                sendBrowserNotification(`Incoming ${s.payload?.isVideo !== false ? "Video" : "Voice"} Call`, {
+                  body: `${s.payload?.callerName || "Friend"} is calling you!`,
+                });
+              }
+            } else if (s.type === "HANGUP" || s.type === "CALL_DECLINE") {
               setIncomingCall(null);
             }
           }
@@ -203,6 +222,70 @@ export default function Dashboard() {
     }
   }
 
+  async function loadFriendRequests() {
+    try {
+      const res = await fetch("/api/friends/request");
+      const data = await res.json();
+      if (data.requests) {
+        setFriendRequests(data.requests);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleAcceptRequest(requestId: string) {
+    try {
+      const res = await fetch("/api/friends/request", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId, action: "ACCEPT" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        loadFriends();
+        loadFriendRequests();
+        alert(data.message || "Friend request accepted!");
+      }
+    } catch {}
+  }
+
+  async function handleDeclineRequest(requestId: string) {
+    try {
+      const res = await fetch("/api/friends/request", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId, action: "DECLINE" }),
+      });
+      if (res.ok) {
+        loadFriendRequests();
+      }
+    } catch {}
+  }
+
+  async function handleSendRequestByName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!searchFriendUsername.trim()) return;
+    setAddFriendStatus("Sending friend request...");
+    try {
+      const res = await fetch("/api/friends/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverUsername: searchFriendUsername.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAddFriendStatus(data.message || "Friend request sent!");
+        setSearchFriendUsername("");
+        loadFriends();
+      } else {
+        setAddFriendStatus(data.error || "Failed to send request");
+      }
+    } catch {
+      setAddFriendStatus("Failed to send request");
+    }
+  }
+
   async function loadFriends() {
     try {
       const res = await fetch("/api/friends");
@@ -226,7 +309,18 @@ export default function Dashboard() {
       const res = await fetch(`/api/friends/${friendshipId}/messages`);
       const data = await res.json();
       if (data.messages) {
-        setFriendMessages(data.messages);
+        setFriendMessages((prev) => {
+          if (data.messages.length > prev.length && prev.length > 0) {
+            const friendUser = activeFriendship?.partner || activeFriendship?.friend;
+            const newMsg = data.messages[data.messages.length - 1];
+            if (newMsg.senderId !== currentUser?.id && document.hidden) {
+              sendBrowserNotification(`New message from ${friendUser?.username || "Friend"}`, {
+                body: newMsg.content,
+              });
+            }
+          }
+          return data.messages;
+        });
       }
 
       // Check for incoming call signals from friend
@@ -235,16 +329,22 @@ export default function Dashboard() {
         const sigData = await sigRes.json();
         if (sigData.signals && sigData.signals.length > 0) {
           for (const s of sigData.signals) {
-            lastSignalCheckRef.current = new Date(s.createdAt).getTime();
+            lastSignalCheckRef.current = s.timestamp || Date.now();
             if (s.type === "CALL_RING") {
               const friendUser = activeFriendship?.partner || activeFriendship?.friend;
               setIncomingCall({
                 roomId: `friendship_${friendshipId}`,
+                partnerUserId: friendUser?.id,
                 partnerName: friendUser?.username || "Friend",
                 partnerAvatar: friendUser?.avatar || "✨",
                 isVideo: s.payload?.isVideo !== false,
               });
-            } else if (s.type === "HANGUP") {
+              if (document.hidden) {
+                sendBrowserNotification(`Incoming ${s.payload?.isVideo !== false ? "Video" : "Voice"} Call`, {
+                  body: `${friendUser?.username || "Friend"} is calling you!`,
+                });
+              }
+            } else if (s.type === "HANGUP" || s.type === "CALL_DECLINE") {
               setIncomingCall(null);
             }
           }
@@ -259,12 +359,14 @@ export default function Dashboard() {
     const friendUser = activeFriendship?.partner || activeFriendship?.friend;
     const friendshipId = activeFriendship?.id || activeFriendship?.friendshipId;
     if (!friendUser || !friendshipId || !currentUser) return;
+    requestNotificationPermission();
 
     setActiveCall({
       roomId: `friendship_${friendshipId}`,
       currentUserId: currentUser.id,
       currentUserName: currentUser.username,
       currentUserAvatar: currentUser.avatar,
+      partnerUserId: friendUser.id,
       partnerName: friendUser.username || "Friend",
       partnerAvatar: friendUser.avatar || "✨",
       isVideoCall: isVideo,
@@ -279,6 +381,7 @@ export default function Dashboard() {
       currentUserId: currentUser.id,
       currentUserName: currentUser.username,
       currentUserAvatar: currentUser.avatar,
+      partnerUserId: incomingCall.partnerUserId,
       partnerName: incomingCall.partnerName,
       partnerAvatar: incomingCall.partnerAvatar,
       isVideoCall: incomingCall.isVideo,
@@ -293,7 +396,7 @@ export default function Dashboard() {
         await fetch("/api/call/signal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId: incomingCall.roomId, type: "HANGUP" }),
+          body: JSON.stringify({ roomId: incomingCall.roomId, targetUserId: incomingCall.partnerUserId, type: "HANGUP" }),
         });
       } catch {}
     }
@@ -534,6 +637,19 @@ export default function Dashboard() {
               }`}
             >
               <MessageSquare className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setShowFriendRequestsModal(true)}
+              title="Friend Requests"
+              className="p-3 rounded-2xl text-purple-300 hover:text-white hover:bg-white/[0.04] transition relative"
+            >
+              <UserPlus className="w-5 h-5" />
+              {friendRequests.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-[9px] font-black text-white flex items-center justify-center animate-pulse">
+                  {friendRequests.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -964,12 +1080,25 @@ export default function Dashboard() {
 
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => setShowFriendRequestsModal(true)}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white transition flex items-center gap-1.5 text-xs font-bold relative"
+                      title="Friend Requests"
+                    >
+                      <UserPlus className="w-4 h-4 text-[#00e676]" />
+                      <span className="hidden sm:inline">Add / Requests</span>
+                      {friendRequests.length > 0 && (
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute top-2 right-2" />
+                      )}
+                    </button>
+
+                    <button
                       onClick={() => startFriendCall(false)}
                       className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition flex items-center gap-1.5 text-xs font-bold"
                       title="Voice Call"
                     >
                       <Phone className="w-4 h-4 text-purple-300" />
                     </button>
+
                     <button
                       onClick={() => startFriendCall(true)}
                       className="p-2.5 rounded-xl bg-[#872bf5] hover:bg-[#7417e3] text-white transition flex items-center gap-1.5 text-xs font-black shadow-md shadow-[#872bf5]/40 hover:scale-105 active:scale-95"
@@ -1340,6 +1469,130 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* FRIEND REQUESTS MODAL */}
+      {showFriendRequestsModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-[#181824] border border-white/15 rounded-[32px] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-[#872bf5]" />
+                <h3 className="text-sm font-black text-white">Friend Requests</h3>
+              </div>
+              <button
+                onClick={() => setShowFriendRequestsModal(false)}
+                className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {friendRequests.length === 0 ? (
+                <div className="text-center py-8 text-xs text-zinc-500">
+                  No pending friend requests.
+                </div>
+              ) : (
+                friendRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="p-3.5 rounded-2xl bg-[#121218] border border-white/5 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-2xl">{req.sender?.avatar || "🌙"}</span>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-white truncate">
+                          {req.sender?.username}
+                        </div>
+                        <div className="text-[10px] text-zinc-400 truncate">
+                          {req.sender?.bio || "Wants to connect!"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleAcceptRequest(req.id)}
+                        className="p-2 px-3 rounded-xl bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold transition flex items-center gap-1 shadow-md shadow-[#872bf5]/30"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Accept</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeclineRequest(req.id)}
+                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs transition"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-white/5">
+              <button
+                onClick={() => {
+                  setShowFriendRequestsModal(false);
+                  setShowAddFriendModal(true);
+                }}
+                className="w-full py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Add Friend by Username</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD FRIEND BY USERNAME MODAL */}
+      {showAddFriendModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm bg-[#181824] border border-white/15 rounded-[32px] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-[#872bf5]" />
+                <h3 className="text-sm font-black text-white">Add Friend by Handle</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddFriendModal(false);
+                  setAddFriendStatus(null);
+                }}
+                className="p-2 rounded-xl text-zinc-400 hover:text-white bg-white/5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {addFriendStatus && (
+              <div className="p-3 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-200 text-xs font-semibold animate-fade-in">
+                {addFriendStatus}
+              </div>
+            )}
+
+            <form onSubmit={handleSendRequestByName} className="space-y-3">
+              <input
+                type="text"
+                placeholder="Enter exact username (e.g. NightOwl_42)..."
+                value={searchFriendUsername}
+                onChange={(e) => setSearchFriendUsername(e.target.value)}
+                required
+                className="w-full bg-[#121218] border border-white/10 rounded-2xl px-4 py-3 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-[#872bf5] transition"
+              />
+
+              <button
+                type="submit"
+                disabled={!searchFriendUsername.trim()}
+                className="w-full bg-[#872bf5] hover:bg-[#7417e3] disabled:opacity-40 text-white font-black py-3 rounded-2xl text-xs transition shadow-lg shadow-[#872bf5]/30 hover:scale-105 active:scale-95"
+              >
+                Send Friend Request 🤝
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ACTIVE FULL WEBRTC VIDEO/AUDIO CALL MODAL */}
       {activeCall && (
         <VideoCallModal
@@ -1347,6 +1600,7 @@ export default function Dashboard() {
           currentUserId={activeCall.currentUserId}
           currentUserName={activeCall.currentUserName}
           currentUserAvatar={activeCall.currentUserAvatar}
+          partnerUserId={activeCall.partnerUserId}
           partnerName={activeCall.partnerName}
           partnerAvatar={activeCall.partnerAvatar}
           isVideoCall={activeCall.isVideoCall}

@@ -64,7 +64,9 @@ export const ModelName = {
   MatchQueue: 'MatchQueue',
   VentPost: 'VentPost',
   DailyQuestion: 'DailyQuestion',
-  DailyAnswer: 'DailyAnswer'
+  DailyAnswer: 'DailyAnswer',
+  FriendRequest: 'FriendRequest',
+  CallSignal: 'CallSignal'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -278,6 +280,32 @@ export const DailyAnswerScalarFieldEnum = {
 export type DailyAnswerScalarFieldEnum = (typeof DailyAnswerScalarFieldEnum)[keyof typeof DailyAnswerScalarFieldEnum]
 
 
+export const FriendRequestScalarFieldEnum = {
+  id: 'id',
+  senderId: 'senderId',
+  receiverId: 'receiverId',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FriendRequestScalarFieldEnum = (typeof FriendRequestScalarFieldEnum)[keyof typeof FriendRequestScalarFieldEnum]
+
+
+export const CallSignalScalarFieldEnum = {
+  id: 'id',
+  roomId: 'roomId',
+  senderId: 'senderId',
+  targetUserId: 'targetUserId',
+  type: 'type',
+  payload: 'payload',
+  timestamp: 'timestamp',
+  createdAt: 'createdAt'
+} as const
+
+export type CallSignalScalarFieldEnum = (typeof CallSignalScalarFieldEnum)[keyof typeof CallSignalScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -453,4 +481,26 @@ export const DailyAnswerOrderByRelevanceFieldEnum = {
 } as const
 
 export type DailyAnswerOrderByRelevanceFieldEnum = (typeof DailyAnswerOrderByRelevanceFieldEnum)[keyof typeof DailyAnswerOrderByRelevanceFieldEnum]
+
+
+export const FriendRequestOrderByRelevanceFieldEnum = {
+  id: 'id',
+  senderId: 'senderId',
+  receiverId: 'receiverId',
+  status: 'status'
+} as const
+
+export type FriendRequestOrderByRelevanceFieldEnum = (typeof FriendRequestOrderByRelevanceFieldEnum)[keyof typeof FriendRequestOrderByRelevanceFieldEnum]
+
+
+export const CallSignalOrderByRelevanceFieldEnum = {
+  id: 'id',
+  roomId: 'roomId',
+  senderId: 'senderId',
+  targetUserId: 'targetUserId',
+  type: 'type',
+  payload: 'payload'
+} as const
+
+export type CallSignalOrderByRelevanceFieldEnum = (typeof CallSignalOrderByRelevanceFieldEnum)[keyof typeof CallSignalOrderByRelevanceFieldEnum]
 

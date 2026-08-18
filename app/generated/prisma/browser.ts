@@ -87,3 +87,13 @@ export type DailyQuestion = Prisma.DailyQuestionModel
  * 
  */
 export type DailyAnswer = Prisma.DailyAnswerModel
+/**
+ * Model FriendRequest
+ * 
+ */
+export type FriendRequest = Prisma.FriendRequestModel
+/**
+ * Model CallSignal
+ * 
+ */
+export type CallSignal = Prisma.CallSignalModel

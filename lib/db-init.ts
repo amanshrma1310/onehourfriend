@@ -200,13 +200,29 @@ const DDL_STATEMENTS = [
     \`id\` VARCHAR(191) NOT NULL PRIMARY KEY,
     \`roomId\` VARCHAR(191) NOT NULL,
     \`senderId\` VARCHAR(191) NOT NULL,
+    \`targetUserId\` VARCHAR(191) NULL,
     \`type\` VARCHAR(191) NOT NULL,
     \`payload\` LONGTEXT NOT NULL,
     \`timestamp\` BIGINT NOT NULL DEFAULT 0,
     \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     INDEX (\`roomId\`, \`timestamp\`),
+    INDEX (\`targetUserId\`, \`timestamp\`),
     INDEX (\`senderId\`),
     INDEX (\`timestamp\`)
+  ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
+
+  `CREATE TABLE IF NOT EXISTS \`FriendRequest\` (
+    \`id\` VARCHAR(191) NOT NULL PRIMARY KEY,
+    \`senderId\` VARCHAR(191) NOT NULL,
+    \`receiverId\` VARCHAR(191) NOT NULL,
+    \`status\` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    UNIQUE KEY \`uniq_sender_receiver\` (\`senderId\`, \`receiverId\`),
+    INDEX (\`receiverId\`, \`status\`),
+    INDEX (\`senderId\`),
+    CONSTRAINT \`fk_freq_sender\` FOREIGN KEY (\`senderId\`) REFERENCES \`User\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`fk_freq_receiver\` FOREIGN KEY (\`receiverId\`) REFERENCES \`User\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`,
 ];
 
@@ -220,8 +236,26 @@ export async function ensureDbTables() {
   initPromise = (async () => {
     try {
       for (const sql of DDL_STATEMENTS) {
-        await prisma.$executeRawUnsafe(sql);
+        try {
+          await prisma.$executeRawUnsafe(sql);
+        } catch (err) {
+          // Continue if already exists
+        }
       }
+
+      // Runtime column migrations for existing MySQL tables
+      try {
+        await prisma.$executeRawUnsafe(
+          "ALTER TABLE `CallSignal` ADD COLUMN `timestamp` BIGINT NOT NULL DEFAULT 0;"
+        );
+      } catch {}
+
+      try {
+        await prisma.$executeRawUnsafe(
+          "ALTER TABLE `CallSignal` ADD COLUMN `targetUserId` VARCHAR(191) NULL;"
+        );
+      } catch {}
+
       isDbInitialized = true;
     } catch (e) {
       console.error("Auto table creation error:", e);

@@ -360,6 +360,8 @@ export type UserWhereInput = {
   interests?: Prisma.UserInterestListRelationFilter
   friendshipsAsUserOne?: Prisma.FriendshipListRelationFilter
   friendshipsAsUserTwo?: Prisma.FriendshipListRelationFilter
+  sentFriendRequests?: Prisma.FriendRequestListRelationFilter
+  receivedFriendRequests?: Prisma.FriendRequestListRelationFilter
   friendMessages?: Prisma.FriendMessageListRelationFilter
   ventPosts?: Prisma.VentPostListRelationFilter
   dailyAnswers?: Prisma.DailyAnswerListRelationFilter
@@ -398,6 +400,8 @@ export type UserOrderByWithRelationInput = {
   interests?: Prisma.UserInterestOrderByRelationAggregateInput
   friendshipsAsUserOne?: Prisma.FriendshipOrderByRelationAggregateInput
   friendshipsAsUserTwo?: Prisma.FriendshipOrderByRelationAggregateInput
+  sentFriendRequests?: Prisma.FriendRequestOrderByRelationAggregateInput
+  receivedFriendRequests?: Prisma.FriendRequestOrderByRelationAggregateInput
   friendMessages?: Prisma.FriendMessageOrderByRelationAggregateInput
   ventPosts?: Prisma.VentPostOrderByRelationAggregateInput
   dailyAnswers?: Prisma.DailyAnswerOrderByRelationAggregateInput
@@ -440,6 +444,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   interests?: Prisma.UserInterestListRelationFilter
   friendshipsAsUserOne?: Prisma.FriendshipListRelationFilter
   friendshipsAsUserTwo?: Prisma.FriendshipListRelationFilter
+  sentFriendRequests?: Prisma.FriendRequestListRelationFilter
+  receivedFriendRequests?: Prisma.FriendRequestListRelationFilter
   friendMessages?: Prisma.FriendMessageListRelationFilter
   ventPosts?: Prisma.VentPostListRelationFilter
   dailyAnswers?: Prisma.DailyAnswerListRelationFilter
@@ -532,6 +538,8 @@ export type UserCreateInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -570,6 +578,8 @@ export type UserUncheckedCreateInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -608,6 +618,8 @@ export type UserUpdateInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -646,6 +658,8 @@ export type UserUncheckedUpdateInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -1060,6 +1074,34 @@ export type UserUpdateOneRequiredWithoutDailyAnswersNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutDailyAnswersInput, Prisma.UserUpdateWithoutDailyAnswersInput>, Prisma.UserUncheckedUpdateWithoutDailyAnswersInput>
 }
 
+export type UserCreateNestedOneWithoutSentFriendRequestsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSentFriendRequestsInput, Prisma.UserUncheckedCreateWithoutSentFriendRequestsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSentFriendRequestsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutReceivedFriendRequestsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReceivedFriendRequestsInput, Prisma.UserUncheckedCreateWithoutReceivedFriendRequestsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReceivedFriendRequestsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSentFriendRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSentFriendRequestsInput, Prisma.UserUncheckedCreateWithoutSentFriendRequestsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSentFriendRequestsInput
+  upsert?: Prisma.UserUpsertWithoutSentFriendRequestsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSentFriendRequestsInput, Prisma.UserUpdateWithoutSentFriendRequestsInput>, Prisma.UserUncheckedUpdateWithoutSentFriendRequestsInput>
+}
+
+export type UserUpdateOneRequiredWithoutReceivedFriendRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReceivedFriendRequestsInput, Prisma.UserUncheckedCreateWithoutReceivedFriendRequestsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReceivedFriendRequestsInput
+  upsert?: Prisma.UserUpsertWithoutReceivedFriendRequestsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutReceivedFriendRequestsInput, Prisma.UserUpdateWithoutReceivedFriendRequestsInput>, Prisma.UserUncheckedUpdateWithoutReceivedFriendRequestsInput>
+}
+
 export type UserCreateWithoutInterestsInput = {
   id?: string
   username: string
@@ -1092,6 +1134,8 @@ export type UserCreateWithoutInterestsInput = {
   reportsMade?: Prisma.ReportCreateNestedManyWithoutReporterInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -1129,6 +1173,8 @@ export type UserUncheckedCreateWithoutInterestsInput = {
   reportsMade?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -1182,6 +1228,8 @@ export type UserUpdateWithoutInterestsInput = {
   reportsMade?: Prisma.ReportUpdateManyWithoutReporterNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -1219,6 +1267,8 @@ export type UserUncheckedUpdateWithoutInterestsInput = {
   reportsMade?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -1256,6 +1306,8 @@ export type UserCreateWithoutSessionsAsUserOneInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -1293,6 +1345,8 @@ export type UserUncheckedCreateWithoutSessionsAsUserOneInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -1335,6 +1389,8 @@ export type UserCreateWithoutSessionsAsUserTwoInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -1372,6 +1428,8 @@ export type UserUncheckedCreateWithoutSessionsAsUserTwoInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -1425,6 +1483,8 @@ export type UserUpdateWithoutSessionsAsUserOneInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -1462,6 +1522,8 @@ export type UserUncheckedUpdateWithoutSessionsAsUserOneInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -1510,6 +1572,8 @@ export type UserUpdateWithoutSessionsAsUserTwoInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -1547,6 +1611,8 @@ export type UserUncheckedUpdateWithoutSessionsAsUserTwoInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -1584,6 +1650,8 @@ export type UserCreateWithoutMessagesInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -1621,6 +1689,8 @@ export type UserUncheckedCreateWithoutMessagesInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -1674,6 +1744,8 @@ export type UserUpdateWithoutMessagesInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -1711,6 +1783,8 @@ export type UserUncheckedUpdateWithoutMessagesInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -1748,6 +1822,8 @@ export type UserCreateWithoutRatingsGivenInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -1785,6 +1861,8 @@ export type UserUncheckedCreateWithoutRatingsGivenInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -1827,6 +1905,8 @@ export type UserCreateWithoutRatingsReceivedInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -1864,6 +1944,8 @@ export type UserUncheckedCreateWithoutRatingsReceivedInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -1917,6 +1999,8 @@ export type UserUpdateWithoutRatingsGivenInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -1954,6 +2038,8 @@ export type UserUncheckedUpdateWithoutRatingsGivenInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -2002,6 +2088,8 @@ export type UserUpdateWithoutRatingsReceivedInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -2039,6 +2127,8 @@ export type UserUncheckedUpdateWithoutRatingsReceivedInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -2076,6 +2166,8 @@ export type UserCreateWithoutFriendshipsAsUserOneInput = {
   reportsMade?: Prisma.ReportCreateNestedManyWithoutReporterInput
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -2113,6 +2205,8 @@ export type UserUncheckedCreateWithoutFriendshipsAsUserOneInput = {
   reportsMade?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -2155,6 +2249,8 @@ export type UserCreateWithoutFriendshipsAsUserTwoInput = {
   reportsMade?: Prisma.ReportCreateNestedManyWithoutReporterInput
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -2192,6 +2288,8 @@ export type UserUncheckedCreateWithoutFriendshipsAsUserTwoInput = {
   reportsMade?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -2245,6 +2343,8 @@ export type UserUpdateWithoutFriendshipsAsUserOneInput = {
   reportsMade?: Prisma.ReportUpdateManyWithoutReporterNestedInput
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -2282,6 +2382,8 @@ export type UserUncheckedUpdateWithoutFriendshipsAsUserOneInput = {
   reportsMade?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -2330,6 +2432,8 @@ export type UserUpdateWithoutFriendshipsAsUserTwoInput = {
   reportsMade?: Prisma.ReportUpdateManyWithoutReporterNestedInput
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -2367,6 +2471,8 @@ export type UserUncheckedUpdateWithoutFriendshipsAsUserTwoInput = {
   reportsMade?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -2405,6 +2511,8 @@ export type UserCreateWithoutFriendMessagesInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
 }
@@ -2442,6 +2550,8 @@ export type UserUncheckedCreateWithoutFriendMessagesInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
 }
@@ -2495,6 +2605,8 @@ export type UserUpdateWithoutFriendMessagesInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
 }
@@ -2532,6 +2644,8 @@ export type UserUncheckedUpdateWithoutFriendMessagesInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
 }
@@ -2568,6 +2682,8 @@ export type UserCreateWithoutBlocksReceivedInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -2605,6 +2721,8 @@ export type UserUncheckedCreateWithoutBlocksReceivedInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -2647,6 +2765,8 @@ export type UserCreateWithoutBlocksGivenInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -2684,6 +2804,8 @@ export type UserUncheckedCreateWithoutBlocksGivenInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -2737,6 +2859,8 @@ export type UserUpdateWithoutBlocksReceivedInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -2774,6 +2898,8 @@ export type UserUncheckedUpdateWithoutBlocksReceivedInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -2822,6 +2948,8 @@ export type UserUpdateWithoutBlocksGivenInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -2859,6 +2987,8 @@ export type UserUncheckedUpdateWithoutBlocksGivenInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -2896,6 +3026,8 @@ export type UserCreateWithoutReportsReceivedInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -2933,6 +3065,8 @@ export type UserUncheckedCreateWithoutReportsReceivedInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -2975,6 +3109,8 @@ export type UserCreateWithoutReportsMadeInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
@@ -3012,6 +3148,8 @@ export type UserUncheckedCreateWithoutReportsMadeInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
@@ -3065,6 +3203,8 @@ export type UserUpdateWithoutReportsReceivedInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -3102,6 +3242,8 @@ export type UserUncheckedUpdateWithoutReportsReceivedInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -3150,6 +3292,8 @@ export type UserUpdateWithoutReportsMadeInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
@@ -3187,6 +3331,8 @@ export type UserUncheckedUpdateWithoutReportsMadeInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
@@ -3225,6 +3371,8 @@ export type UserCreateWithoutVentPostsInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
 }
@@ -3262,6 +3410,8 @@ export type UserUncheckedCreateWithoutVentPostsInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
 }
@@ -3315,6 +3465,8 @@ export type UserUpdateWithoutVentPostsInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
 }
@@ -3352,6 +3504,8 @@ export type UserUncheckedUpdateWithoutVentPostsInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
 }
@@ -3389,6 +3543,8 @@ export type UserCreateWithoutDailyAnswersInput = {
   interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
 }
@@ -3426,6 +3582,8 @@ export type UserUncheckedCreateWithoutDailyAnswersInput = {
   interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
   friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
   ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
 }
@@ -3479,6 +3637,8 @@ export type UserUpdateWithoutDailyAnswersInput = {
   interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
 }
@@ -3516,8 +3676,354 @@ export type UserUncheckedUpdateWithoutDailyAnswersInput = {
   interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
   friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
   friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
   friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
   ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutSentFriendRequestsInput = {
+  id?: string
+  username: string
+  email?: string | null
+  passwordHash?: string | null
+  avatar?: string
+  bio?: string | null
+  activeRole?: string
+  preferredIntent?: string
+  preferredSocialGroup?: string
+  mood?: string
+  status?: string
+  trustScore?: number
+  karmaPoints?: number
+  totalSessionsAsGuider?: number
+  totalSessionsAsSeeker?: number
+  isAnonymous?: boolean
+  isBanned?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeen?: Date | string | null
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  sessionsAsUserOne?: Prisma.ConversationSessionCreateNestedManyWithoutUserOneInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionCreateNestedManyWithoutUserTwoInput
+  messages?: Prisma.MessageCreateNestedManyWithoutUserInput
+  ratingsGiven?: Prisma.RatingCreateNestedManyWithoutFromUserInput
+  ratingsReceived?: Prisma.RatingCreateNestedManyWithoutToUserInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  reportsMade?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
+  friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
+  friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  receivedFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutReceiverInput
+  friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
+  ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
+  dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutSentFriendRequestsInput = {
+  id?: string
+  username: string
+  email?: string | null
+  passwordHash?: string | null
+  avatar?: string
+  bio?: string | null
+  activeRole?: string
+  preferredIntent?: string
+  preferredSocialGroup?: string
+  mood?: string
+  status?: string
+  trustScore?: number
+  karmaPoints?: number
+  totalSessionsAsGuider?: number
+  totalSessionsAsSeeker?: number
+  isAnonymous?: boolean
+  isBanned?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeen?: Date | string | null
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  sessionsAsUserOne?: Prisma.ConversationSessionUncheckedCreateNestedManyWithoutUserOneInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionUncheckedCreateNestedManyWithoutUserTwoInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutUserInput
+  ratingsGiven?: Prisma.RatingUncheckedCreateNestedManyWithoutFromUserInput
+  ratingsReceived?: Prisma.RatingUncheckedCreateNestedManyWithoutToUserInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  reportsMade?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
+  friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
+  friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutReceiverInput
+  friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
+  ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
+  dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutSentFriendRequestsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentFriendRequestsInput, Prisma.UserUncheckedCreateWithoutSentFriendRequestsInput>
+}
+
+export type UserCreateWithoutReceivedFriendRequestsInput = {
+  id?: string
+  username: string
+  email?: string | null
+  passwordHash?: string | null
+  avatar?: string
+  bio?: string | null
+  activeRole?: string
+  preferredIntent?: string
+  preferredSocialGroup?: string
+  mood?: string
+  status?: string
+  trustScore?: number
+  karmaPoints?: number
+  totalSessionsAsGuider?: number
+  totalSessionsAsSeeker?: number
+  isAnonymous?: boolean
+  isBanned?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeen?: Date | string | null
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  sessionsAsUserOne?: Prisma.ConversationSessionCreateNestedManyWithoutUserOneInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionCreateNestedManyWithoutUserTwoInput
+  messages?: Prisma.MessageCreateNestedManyWithoutUserInput
+  ratingsGiven?: Prisma.RatingCreateNestedManyWithoutFromUserInput
+  ratingsReceived?: Prisma.RatingCreateNestedManyWithoutToUserInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  reportsMade?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  interests?: Prisma.UserInterestCreateNestedManyWithoutUserInput
+  friendshipsAsUserOne?: Prisma.FriendshipCreateNestedManyWithoutUserOneInput
+  friendshipsAsUserTwo?: Prisma.FriendshipCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestCreateNestedManyWithoutSenderInput
+  friendMessages?: Prisma.FriendMessageCreateNestedManyWithoutSenderInput
+  ventPosts?: Prisma.VentPostCreateNestedManyWithoutUserInput
+  dailyAnswers?: Prisma.DailyAnswerCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutReceivedFriendRequestsInput = {
+  id?: string
+  username: string
+  email?: string | null
+  passwordHash?: string | null
+  avatar?: string
+  bio?: string | null
+  activeRole?: string
+  preferredIntent?: string
+  preferredSocialGroup?: string
+  mood?: string
+  status?: string
+  trustScore?: number
+  karmaPoints?: number
+  totalSessionsAsGuider?: number
+  totalSessionsAsSeeker?: number
+  isAnonymous?: boolean
+  isBanned?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeen?: Date | string | null
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  sessionsAsUserOne?: Prisma.ConversationSessionUncheckedCreateNestedManyWithoutUserOneInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionUncheckedCreateNestedManyWithoutUserTwoInput
+  messages?: Prisma.MessageUncheckedCreateNestedManyWithoutUserInput
+  ratingsGiven?: Prisma.RatingUncheckedCreateNestedManyWithoutFromUserInput
+  ratingsReceived?: Prisma.RatingUncheckedCreateNestedManyWithoutToUserInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  reportsMade?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  interests?: Prisma.UserInterestUncheckedCreateNestedManyWithoutUserInput
+  friendshipsAsUserOne?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserOneInput
+  friendshipsAsUserTwo?: Prisma.FriendshipUncheckedCreateNestedManyWithoutUserTwoInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedCreateNestedManyWithoutSenderInput
+  friendMessages?: Prisma.FriendMessageUncheckedCreateNestedManyWithoutSenderInput
+  ventPosts?: Prisma.VentPostUncheckedCreateNestedManyWithoutUserInput
+  dailyAnswers?: Prisma.DailyAnswerUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutReceivedFriendRequestsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutReceivedFriendRequestsInput, Prisma.UserUncheckedCreateWithoutReceivedFriendRequestsInput>
+}
+
+export type UserUpsertWithoutSentFriendRequestsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSentFriendRequestsInput, Prisma.UserUncheckedUpdateWithoutSentFriendRequestsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSentFriendRequestsInput, Prisma.UserUncheckedCreateWithoutSentFriendRequestsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSentFriendRequestsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSentFriendRequestsInput, Prisma.UserUncheckedUpdateWithoutSentFriendRequestsInput>
+}
+
+export type UserUpdateWithoutSentFriendRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.StringFieldUpdateOperationsInput | string
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeRole?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredIntent?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredSocialGroup?: Prisma.StringFieldUpdateOperationsInput | string
+  mood?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  trustScore?: Prisma.FloatFieldUpdateOperationsInput | number
+  karmaPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsGuider?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsSeeker?: Prisma.IntFieldUpdateOperationsInput | number
+  isAnonymous?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isBanned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeen?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  sessionsAsUserOne?: Prisma.ConversationSessionUpdateManyWithoutUserOneNestedInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionUpdateManyWithoutUserTwoNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutUserNestedInput
+  ratingsGiven?: Prisma.RatingUpdateManyWithoutFromUserNestedInput
+  ratingsReceived?: Prisma.RatingUpdateManyWithoutToUserNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  reportsMade?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
+  friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
+  friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUpdateManyWithoutReceiverNestedInput
+  friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
+  ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
+  dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSentFriendRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.StringFieldUpdateOperationsInput | string
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeRole?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredIntent?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredSocialGroup?: Prisma.StringFieldUpdateOperationsInput | string
+  mood?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  trustScore?: Prisma.FloatFieldUpdateOperationsInput | number
+  karmaPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsGuider?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsSeeker?: Prisma.IntFieldUpdateOperationsInput | number
+  isAnonymous?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isBanned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeen?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  sessionsAsUserOne?: Prisma.ConversationSessionUncheckedUpdateManyWithoutUserOneNestedInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionUncheckedUpdateManyWithoutUserTwoNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutUserNestedInput
+  ratingsGiven?: Prisma.RatingUncheckedUpdateManyWithoutFromUserNestedInput
+  ratingsReceived?: Prisma.RatingUncheckedUpdateManyWithoutToUserNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  reportsMade?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
+  friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
+  friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  receivedFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutReceiverNestedInput
+  friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
+  ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
+  dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserUpsertWithoutReceivedFriendRequestsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutReceivedFriendRequestsInput, Prisma.UserUncheckedUpdateWithoutReceivedFriendRequestsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutReceivedFriendRequestsInput, Prisma.UserUncheckedCreateWithoutReceivedFriendRequestsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutReceivedFriendRequestsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutReceivedFriendRequestsInput, Prisma.UserUncheckedUpdateWithoutReceivedFriendRequestsInput>
+}
+
+export type UserUpdateWithoutReceivedFriendRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.StringFieldUpdateOperationsInput | string
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeRole?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredIntent?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredSocialGroup?: Prisma.StringFieldUpdateOperationsInput | string
+  mood?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  trustScore?: Prisma.FloatFieldUpdateOperationsInput | number
+  karmaPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsGuider?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsSeeker?: Prisma.IntFieldUpdateOperationsInput | number
+  isAnonymous?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isBanned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeen?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  sessionsAsUserOne?: Prisma.ConversationSessionUpdateManyWithoutUserOneNestedInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionUpdateManyWithoutUserTwoNestedInput
+  messages?: Prisma.MessageUpdateManyWithoutUserNestedInput
+  ratingsGiven?: Prisma.RatingUpdateManyWithoutFromUserNestedInput
+  ratingsReceived?: Prisma.RatingUpdateManyWithoutToUserNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  reportsMade?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  interests?: Prisma.UserInterestUpdateManyWithoutUserNestedInput
+  friendshipsAsUserOne?: Prisma.FriendshipUpdateManyWithoutUserOneNestedInput
+  friendshipsAsUserTwo?: Prisma.FriendshipUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUpdateManyWithoutSenderNestedInput
+  friendMessages?: Prisma.FriendMessageUpdateManyWithoutSenderNestedInput
+  ventPosts?: Prisma.VentPostUpdateManyWithoutUserNestedInput
+  dailyAnswers?: Prisma.DailyAnswerUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutReceivedFriendRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  passwordHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.StringFieldUpdateOperationsInput | string
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeRole?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredIntent?: Prisma.StringFieldUpdateOperationsInput | string
+  preferredSocialGroup?: Prisma.StringFieldUpdateOperationsInput | string
+  mood?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  trustScore?: Prisma.FloatFieldUpdateOperationsInput | number
+  karmaPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsGuider?: Prisma.IntFieldUpdateOperationsInput | number
+  totalSessionsAsSeeker?: Prisma.IntFieldUpdateOperationsInput | number
+  isAnonymous?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isBanned?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeen?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  sessionsAsUserOne?: Prisma.ConversationSessionUncheckedUpdateManyWithoutUserOneNestedInput
+  sessionsAsUserTwo?: Prisma.ConversationSessionUncheckedUpdateManyWithoutUserTwoNestedInput
+  messages?: Prisma.MessageUncheckedUpdateManyWithoutUserNestedInput
+  ratingsGiven?: Prisma.RatingUncheckedUpdateManyWithoutFromUserNestedInput
+  ratingsReceived?: Prisma.RatingUncheckedUpdateManyWithoutToUserNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  reportsMade?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  interests?: Prisma.UserInterestUncheckedUpdateManyWithoutUserNestedInput
+  friendshipsAsUserOne?: Prisma.FriendshipUncheckedUpdateManyWithoutUserOneNestedInput
+  friendshipsAsUserTwo?: Prisma.FriendshipUncheckedUpdateManyWithoutUserTwoNestedInput
+  sentFriendRequests?: Prisma.FriendRequestUncheckedUpdateManyWithoutSenderNestedInput
+  friendMessages?: Prisma.FriendMessageUncheckedUpdateManyWithoutSenderNestedInput
+  ventPosts?: Prisma.VentPostUncheckedUpdateManyWithoutUserNestedInput
+  dailyAnswers?: Prisma.DailyAnswerUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -3538,6 +4044,8 @@ export type UserCountOutputType = {
   interests: number
   friendshipsAsUserOne: number
   friendshipsAsUserTwo: number
+  sentFriendRequests: number
+  receivedFriendRequests: number
   friendMessages: number
   ventPosts: number
   dailyAnswers: number
@@ -3556,6 +4064,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   interests?: boolean | UserCountOutputTypeCountInterestsArgs
   friendshipsAsUserOne?: boolean | UserCountOutputTypeCountFriendshipsAsUserOneArgs
   friendshipsAsUserTwo?: boolean | UserCountOutputTypeCountFriendshipsAsUserTwoArgs
+  sentFriendRequests?: boolean | UserCountOutputTypeCountSentFriendRequestsArgs
+  receivedFriendRequests?: boolean | UserCountOutputTypeCountReceivedFriendRequestsArgs
   friendMessages?: boolean | UserCountOutputTypeCountFriendMessagesArgs
   ventPosts?: boolean | UserCountOutputTypeCountVentPostsArgs
   dailyAnswers?: boolean | UserCountOutputTypeCountDailyAnswersArgs
@@ -3658,6 +4168,20 @@ export type UserCountOutputTypeCountFriendshipsAsUserTwoArgs<ExtArgs extends run
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountSentFriendRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FriendRequestWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountReceivedFriendRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FriendRequestWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountFriendMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.FriendMessageWhereInput
 }
@@ -3710,6 +4234,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   interests?: boolean | Prisma.User$interestsArgs<ExtArgs>
   friendshipsAsUserOne?: boolean | Prisma.User$friendshipsAsUserOneArgs<ExtArgs>
   friendshipsAsUserTwo?: boolean | Prisma.User$friendshipsAsUserTwoArgs<ExtArgs>
+  sentFriendRequests?: boolean | Prisma.User$sentFriendRequestsArgs<ExtArgs>
+  receivedFriendRequests?: boolean | Prisma.User$receivedFriendRequestsArgs<ExtArgs>
   friendMessages?: boolean | Prisma.User$friendMessagesArgs<ExtArgs>
   ventPosts?: boolean | Prisma.User$ventPostsArgs<ExtArgs>
   dailyAnswers?: boolean | Prisma.User$dailyAnswersArgs<ExtArgs>
@@ -3755,6 +4281,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   interests?: boolean | Prisma.User$interestsArgs<ExtArgs>
   friendshipsAsUserOne?: boolean | Prisma.User$friendshipsAsUserOneArgs<ExtArgs>
   friendshipsAsUserTwo?: boolean | Prisma.User$friendshipsAsUserTwoArgs<ExtArgs>
+  sentFriendRequests?: boolean | Prisma.User$sentFriendRequestsArgs<ExtArgs>
+  receivedFriendRequests?: boolean | Prisma.User$receivedFriendRequestsArgs<ExtArgs>
   friendMessages?: boolean | Prisma.User$friendMessagesArgs<ExtArgs>
   ventPosts?: boolean | Prisma.User$ventPostsArgs<ExtArgs>
   dailyAnswers?: boolean | Prisma.User$dailyAnswersArgs<ExtArgs>
@@ -3776,6 +4304,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     interests: Prisma.$UserInterestPayload<ExtArgs>[]
     friendshipsAsUserOne: Prisma.$FriendshipPayload<ExtArgs>[]
     friendshipsAsUserTwo: Prisma.$FriendshipPayload<ExtArgs>[]
+    sentFriendRequests: Prisma.$FriendRequestPayload<ExtArgs>[]
+    receivedFriendRequests: Prisma.$FriendRequestPayload<ExtArgs>[]
     friendMessages: Prisma.$FriendMessagePayload<ExtArgs>[]
     ventPosts: Prisma.$VentPostPayload<ExtArgs>[]
     dailyAnswers: Prisma.$DailyAnswerPayload<ExtArgs>[]
@@ -4153,6 +4683,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   interests<T extends Prisma.User$interestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$interestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserInterestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   friendshipsAsUserOne<T extends Prisma.User$friendshipsAsUserOneArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$friendshipsAsUserOneArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FriendshipPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   friendshipsAsUserTwo<T extends Prisma.User$friendshipsAsUserTwoArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$friendshipsAsUserTwoArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FriendshipPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  sentFriendRequests<T extends Prisma.User$sentFriendRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sentFriendRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FriendRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  receivedFriendRequests<T extends Prisma.User$receivedFriendRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$receivedFriendRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FriendRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   friendMessages<T extends Prisma.User$friendMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$friendMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FriendMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   ventPosts<T extends Prisma.User$ventPostsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ventPostsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VentPostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   dailyAnswers<T extends Prisma.User$dailyAnswersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$dailyAnswersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DailyAnswerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4838,6 +5370,54 @@ export type User$friendshipsAsUserTwoArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.FriendshipScalarFieldEnum | Prisma.FriendshipScalarFieldEnum[]
+}
+
+/**
+ * User.sentFriendRequests
+ */
+export type User$sentFriendRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FriendRequest
+   */
+  select?: Prisma.FriendRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the FriendRequest
+   */
+  omit?: Prisma.FriendRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FriendRequestInclude<ExtArgs> | null
+  where?: Prisma.FriendRequestWhereInput
+  orderBy?: Prisma.FriendRequestOrderByWithRelationInput | Prisma.FriendRequestOrderByWithRelationInput[]
+  cursor?: Prisma.FriendRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FriendRequestScalarFieldEnum | Prisma.FriendRequestScalarFieldEnum[]
+}
+
+/**
+ * User.receivedFriendRequests
+ */
+export type User$receivedFriendRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FriendRequest
+   */
+  select?: Prisma.FriendRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the FriendRequest
+   */
+  omit?: Prisma.FriendRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FriendRequestInclude<ExtArgs> | null
+  where?: Prisma.FriendRequestWhereInput
+  orderBy?: Prisma.FriendRequestOrderByWithRelationInput | Prisma.FriendRequestOrderByWithRelationInput[]
+  cursor?: Prisma.FriendRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FriendRequestScalarFieldEnum | Prisma.FriendRequestScalarFieldEnum[]
 }
 
 /**

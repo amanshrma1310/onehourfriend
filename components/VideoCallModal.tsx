@@ -16,6 +16,7 @@ interface VideoCallModalProps {
   currentUserId: string;
   currentUserName?: string;
   currentUserAvatar?: string;
+  partnerUserId?: string;
   partnerName: string;
   partnerAvatar: string;
   isVideoCall?: boolean;
@@ -28,6 +29,7 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun.services.mozilla.com" },
   ],
 };
 
@@ -36,6 +38,7 @@ export default function VideoCallModal({
   currentUserId,
   currentUserName = "Friend",
   currentUserAvatar = "🌙",
+  partnerUserId,
   partnerName,
   partnerAvatar,
   isVideoCall = true,
@@ -64,13 +67,13 @@ export default function VideoCallModal({
         await fetch("/api/call/signal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomId, type, payload }),
+          body: JSON.stringify({ roomId, targetUserId: partnerUserId, type, payload }),
         });
       } catch (err) {
         console.error("Signal send error:", err);
       }
     },
-    [roomId]
+    [roomId, partnerUserId]
   );
 
   // Play pleasant Web Audio chime while calling

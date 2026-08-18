@@ -410,7 +410,9 @@ export const ModelName = {
   MatchQueue: 'MatchQueue',
   VentPost: 'VentPost',
   DailyQuestion: 'DailyQuestion',
-  DailyAnswer: 'DailyAnswer'
+  DailyAnswer: 'DailyAnswer',
+  FriendRequest: 'FriendRequest',
+  CallSignal: 'CallSignal'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -426,7 +428,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "interest" | "userInterest" | "conversationSession" | "message" | "rating" | "friendship" | "friendMessage" | "block" | "report" | "matchQueue" | "ventPost" | "dailyQuestion" | "dailyAnswer"
+    modelProps: "user" | "interest" | "userInterest" | "conversationSession" | "message" | "rating" | "friendship" | "friendMessage" | "block" | "report" | "matchQueue" | "ventPost" | "dailyQuestion" | "dailyAnswer" | "friendRequest" | "callSignal"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1354,6 +1356,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    FriendRequest: {
+      payload: Prisma.$FriendRequestPayload<ExtArgs>
+      fields: Prisma.FriendRequestFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.FriendRequestFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.FriendRequestFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload>
+        }
+        findFirst: {
+          args: Prisma.FriendRequestFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.FriendRequestFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload>
+        }
+        findMany: {
+          args: Prisma.FriendRequestFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload>[]
+        }
+        create: {
+          args: Prisma.FriendRequestCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload>
+        }
+        createMany: {
+          args: Prisma.FriendRequestCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.FriendRequestDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload>
+        }
+        update: {
+          args: Prisma.FriendRequestUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload>
+        }
+        deleteMany: {
+          args: Prisma.FriendRequestDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.FriendRequestUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.FriendRequestUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FriendRequestPayload>
+        }
+        aggregate: {
+          args: Prisma.FriendRequestAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateFriendRequest>
+        }
+        groupBy: {
+          args: Prisma.FriendRequestGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FriendRequestGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.FriendRequestCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FriendRequestCountAggregateOutputType> | number
+        }
+      }
+    }
+    CallSignal: {
+      payload: Prisma.$CallSignalPayload<ExtArgs>
+      fields: Prisma.CallSignalFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CallSignalFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CallSignalFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload>
+        }
+        findFirst: {
+          args: Prisma.CallSignalFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CallSignalFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload>
+        }
+        findMany: {
+          args: Prisma.CallSignalFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload>[]
+        }
+        create: {
+          args: Prisma.CallSignalCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload>
+        }
+        createMany: {
+          args: Prisma.CallSignalCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.CallSignalDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload>
+        }
+        update: {
+          args: Prisma.CallSignalUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload>
+        }
+        deleteMany: {
+          args: Prisma.CallSignalDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CallSignalUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.CallSignalUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CallSignalPayload>
+        }
+        aggregate: {
+          args: Prisma.CallSignalAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCallSignal>
+        }
+        groupBy: {
+          args: Prisma.CallSignalGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CallSignalGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CallSignalCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CallSignalCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1588,6 +1722,32 @@ export const DailyAnswerScalarFieldEnum = {
 export type DailyAnswerScalarFieldEnum = (typeof DailyAnswerScalarFieldEnum)[keyof typeof DailyAnswerScalarFieldEnum]
 
 
+export const FriendRequestScalarFieldEnum = {
+  id: 'id',
+  senderId: 'senderId',
+  receiverId: 'receiverId',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FriendRequestScalarFieldEnum = (typeof FriendRequestScalarFieldEnum)[keyof typeof FriendRequestScalarFieldEnum]
+
+
+export const CallSignalScalarFieldEnum = {
+  id: 'id',
+  roomId: 'roomId',
+  senderId: 'senderId',
+  targetUserId: 'targetUserId',
+  type: 'type',
+  payload: 'payload',
+  timestamp: 'timestamp',
+  createdAt: 'createdAt'
+} as const
+
+export type CallSignalScalarFieldEnum = (typeof CallSignalScalarFieldEnum)[keyof typeof CallSignalScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1765,6 +1925,28 @@ export const DailyAnswerOrderByRelevanceFieldEnum = {
 export type DailyAnswerOrderByRelevanceFieldEnum = (typeof DailyAnswerOrderByRelevanceFieldEnum)[keyof typeof DailyAnswerOrderByRelevanceFieldEnum]
 
 
+export const FriendRequestOrderByRelevanceFieldEnum = {
+  id: 'id',
+  senderId: 'senderId',
+  receiverId: 'receiverId',
+  status: 'status'
+} as const
+
+export type FriendRequestOrderByRelevanceFieldEnum = (typeof FriendRequestOrderByRelevanceFieldEnum)[keyof typeof FriendRequestOrderByRelevanceFieldEnum]
+
+
+export const CallSignalOrderByRelevanceFieldEnum = {
+  id: 'id',
+  roomId: 'roomId',
+  senderId: 'senderId',
+  targetUserId: 'targetUserId',
+  type: 'type',
+  payload: 'payload'
+} as const
+
+export type CallSignalOrderByRelevanceFieldEnum = (typeof CallSignalOrderByRelevanceFieldEnum)[keyof typeof CallSignalOrderByRelevanceFieldEnum]
+
+
 
 /**
  * Field references
@@ -1803,6 +1985,13 @@ export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
  * Reference to a field of type 'DateTime'
  */
 export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+    
+
+
+/**
+ * Reference to a field of type 'BigInt'
+ */
+export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
     
 
 /**
@@ -1970,6 +2159,8 @@ export type GlobalOmitConfig = {
   ventPost?: Prisma.VentPostOmit
   dailyQuestion?: Prisma.DailyQuestionOmit
   dailyAnswer?: Prisma.DailyAnswerOmit
+  friendRequest?: Prisma.FriendRequestOmit
+  callSignal?: Prisma.CallSignalOmit
 }
 
 /* Types for Logging */
