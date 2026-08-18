@@ -9,6 +9,7 @@ import {
   PhoneOff,
   ShieldCheck,
   RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 interface VideoCallModalProps {
@@ -37,6 +38,27 @@ const ICE_SERVERS: RTCConfiguration = {
   iceCandidatePoolSize: 10,
 };
 
+function createSyntheticAudioStream(): MediaStream {
+  try {
+    if (typeof window !== "undefined") {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const dst = ctx.createMediaStreamDestination();
+        osc.connect(dst);
+        osc.start();
+        const track = dst.stream.getAudioTracks()[0];
+        if (track) {
+          track.enabled = false;
+          return new MediaStream([track]);
+        }
+      }
+    }
+  } catch {}
+  return new MediaStream();
+}
+
 export default function VideoCallModal({
   roomId,
   currentUserId,
@@ -54,6 +76,7 @@ export default function VideoCallModal({
   const [isVideoDisabled, setIsVideoDisabled] = useState(!isVideoCall);
   const [callDuration, setCallDuration] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -148,97 +171,132 @@ export default function VideoCallModal({
     }
   }, []);
 
+  // Hot-swap media stream with real camera/mic
+  const enableRealMedia = useCallback(async () => {
+    try {
+      setErrorMessage(null);
+      setPermissionDenied(false);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: isVideoCall ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
+        audio: true,
+      });
+
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        setIsVideoDisabled(false);
+      }
+
+      if (pcRef.current) {
+        const senders = pcRef.current.getSenders();
+        stream.getTracks().forEach((newTrack) => {
+          const existingSender = senders.find((s) => s.track?.kind === newTrack.kind);
+          if (existingSender) {
+            existingSender.replaceTrack(newTrack);
+          } else {
+            pcRef.current?.addTrack(newTrack, stream);
+          }
+        });
+      }
+    } catch (err: any) {
+      console.error("Enable media retry error:", err);
+      setPermissionDenied(true);
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setErrorMessage("Camera/Microphone access was blocked. Click the lock 🔒 icon next to your website address bar to allow permissions.");
+      } else {
+        setErrorMessage("Could not open camera/mic: " + (err.message || "Unknown error"));
+      }
+    }
+  }, [isVideoCall]);
+
   // Main Call Initializer
   const initCall = useCallback(async () => {
     setErrorMessage(null);
+    setPermissionDenied(false);
+
+    let stream: MediaStream | null = null;
+
     try {
-      // 1. Get Camera and Microphone access with graceful audio-only fallback
-      let stream: MediaStream | null = null;
-
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: isVideoCall ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
+        audio: true,
+      });
+      setIsVideoDisabled(!isVideoCall);
+    } catch (videoErr: any) {
+      console.warn("Primary getUserMedia failed, trying audio-only:", videoErr);
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: isVideoCall ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
-          audio: true,
-        });
-      } catch (videoErr: any) {
-        console.warn("Video getUserMedia failed, attempting audio-only fallback:", videoErr);
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          setIsVideoDisabled(true);
-        } catch (audioErr: any) {
-          console.error("Audio getUserMedia also failed:", audioErr);
-          throw audioErr;
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setIsVideoDisabled(true);
+      } catch (audioErr: any) {
+        console.warn("Audio getUserMedia also failed (permissions denied), using synthetic media stream to maintain WebRTC handshake:", audioErr);
+        stream = createSyntheticAudioStream();
+        setPermissionDenied(true);
+        setIsVideoDisabled(true);
+        if (typeof window !== "undefined" && window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
+          setErrorMessage("Browsers require an HTTPS secure connection (SSL) to enable camera and microphone.");
+        } else {
+          setErrorMessage("Camera/Microphone permission was denied. Click the lock 🔒 icon in your browser address bar to allow permissions.");
         }
       }
+    }
 
-      localStreamRef.current = stream;
-      if (localVideoRef.current && stream.getVideoTracks().length > 0) {
-        localVideoRef.current.srcObject = stream;
+    localStreamRef.current = stream;
+    if (localVideoRef.current && stream.getVideoTracks().length > 0) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+    // Create RTCPeerConnection with STUN pool
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    pcRef.current = pc;
+
+    // Add stream tracks
+    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+    // Handle remote incoming track
+    pc.ontrack = (event) => {
+      if (remoteVideoRef.current && event.streams[0]) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+        remoteVideoRef.current.play().catch(() => {});
+        setCallState("CONNECTED");
       }
+    };
 
-      // 2. Create RTCPeerConnection with full STUN pool
-      const pc = new RTCPeerConnection(ICE_SERVERS);
-      pcRef.current = pc;
-
-      // Add local media tracks
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-      // Handle remote incoming track
-      pc.ontrack = (event) => {
-        if (remoteVideoRef.current && event.streams[0]) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-          remoteVideoRef.current.play().catch(() => {});
-          setCallState("CONNECTED");
-        }
-      };
-
-      // Handle ICE Candidates
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          sendSignal("CANDIDATE", event.candidate);
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "connected") {
-          setCallState("CONNECTED");
-        } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
-          setCallState("ENDED");
-        }
-      };
-
-      if (isInitiator) {
-        setCallState("CALLING");
-
-        // Broadcast Initial Ring
-        sendSignal("CALL_RING", {
-          callerName: currentUserName,
-          callerAvatar: currentUserAvatar,
-          isVideo: isVideoCall,
-        });
-
-        // Create WebRTC Offer
-        const offer = await pc.createOffer({
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: isVideoCall,
-        });
-        await pc.setLocalDescription(offer);
-        sendSignal("OFFER", offer);
-      } else {
-        setCallState("CONNECTING");
-        sendSignal("CALL_ACCEPT", { acceptedBy: currentUserId });
+    // Handle ICE Candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendSignal("CANDIDATE", event.candidate);
       }
-    } catch (err: any) {
-      console.error("Media error:", err);
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setErrorMessage("Camera/Microphone permission was denied. Click the lock 🔒 icon in your browser address bar, enable Camera & Mic, and tap Retry.");
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        setErrorMessage("No camera or microphone found on your device.");
-      } else if (window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
-        setErrorMessage("Browsers require an HTTPS secure connection (SSL) to enable camera and microphone.");
-      } else {
-        setErrorMessage("Could not access camera/microphone: " + (err.message || "Unknown device error"));
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "connected") {
+        setCallState("CONNECTED");
+      } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+        setCallState("ENDED");
       }
+    };
+
+    if (isInitiator) {
+      setCallState("CALLING");
+
+      // Broadcast Initial Ring
+      sendSignal("CALL_RING", {
+        callerName: currentUserName,
+        callerAvatar: currentUserAvatar,
+        isVideo: isVideoCall,
+      });
+
+      // Create WebRTC Offer
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: isVideoCall,
+      });
+      await pc.setLocalDescription(offer);
+      sendSignal("OFFER", offer);
+    } else {
+      setCallState("CONNECTING");
+      sendSignal("CALL_ACCEPT", { acceptedBy: currentUserId });
     }
   }, [isInitiator, isVideoCall, currentUserName, currentUserAvatar, currentUserId, sendSignal]);
 
@@ -446,14 +504,23 @@ export default function VideoCallModal({
                 {errorMessage || "Establishing direct peer-to-peer HD encrypted video connection..."}
               </p>
 
-              {errorMessage && (
-                <div className="pt-2">
+              {permissionDenied && (
+                <div className="pt-3 max-w-sm mx-auto bg-[#181824] border border-amber-500/40 p-4 rounded-2xl space-y-2.5 text-left shadow-xl">
+                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>How to enable Camera & Microphone:</span>
+                  </div>
+                  <ol className="text-[11px] text-zinc-400 list-decimal list-inside space-y-1">
+                    <li>Look at the address/URL bar at the top of your browser.</li>
+                    <li>Click the <strong>Lock 🔒</strong> or <strong>Settings 🎚️</strong> icon next to the URL.</li>
+                    <li>Turn <strong>Camera</strong> and <strong>Microphone</strong> to <strong>Allow</strong>.</li>
+                  </ol>
                   <button
-                    onClick={() => initCall()}
-                    className="bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-[#872bf5]/40 flex items-center gap-2 mx-auto transition hover:scale-105 active:scale-95"
+                    onClick={enableRealMedia}
+                    className="w-full bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-black py-2.5 rounded-xl shadow-lg shadow-[#872bf5]/40 flex items-center justify-center gap-1.5 transition hover:scale-105 active:scale-95"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Retry Permission & Reconnect</span>
+                    <span>Request Camera & Mic Access</span>
                   </button>
                 </div>
               )}
@@ -473,9 +540,17 @@ export default function VideoCallModal({
             }`}
           />
           {isVideoDisabled && (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[#181824] text-zinc-400 text-xs gap-1">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#181824] text-zinc-400 text-xs gap-1 p-2 text-center">
               <VideoOff className="w-5 h-5 text-zinc-500" />
               <span className="text-[10px] font-bold">Camera Off</span>
+              {permissionDenied && (
+                <button
+                  onClick={enableRealMedia}
+                  className="text-[9px] text-purple-300 underline font-bold mt-1"
+                >
+                  Enable
+                </button>
+              )}
             </div>
           )}
           <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-white">
