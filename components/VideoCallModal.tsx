@@ -98,10 +98,10 @@ export default function VideoCallModal({
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<PeerInstance | null>(null);
   const activeMediaConnRef = useRef<MediaConnection | null>(null);
-  const callAttemptIntervalRef = useRef<any>(null);
   const ringAudioIntervalRef = useRef<any>(null);
   const httpSignalPollRef = useRef<any>(null);
   const isClosingRef = useRef(false);
+  const callInitiatedRef = useRef(false);
 
   const cleanRoomId = (roomId || "global").replace(/[^a-zA-Z0-9_-]/g, "_");
   const myPeerId = `ohf_${(currentUserId || "usr").replace(/[^a-zA-Z0-9_-]/g, "_")}_${cleanRoomId}`;
@@ -109,7 +109,7 @@ export default function VideoCallModal({
     ? `ohf_${partnerUserId.replace(/[^a-zA-Z0-9_-]/g, "_")}_${cleanRoomId}`
     : null;
 
-  // Helper: Send HTTP backup signal
+  // Helper: Send HTTP signal
   const sendSignal = useCallback(
     async (type: string, payload: any = {}) => {
       try {
@@ -169,7 +169,6 @@ export default function VideoCallModal({
     if (isClosingRef.current) return;
     isClosingRef.current = true;
 
-    if (callAttemptIntervalRef.current) clearInterval(callAttemptIntervalRef.current);
     if (httpSignalPollRef.current) clearInterval(httpSignalPollRef.current);
     if (ringAudioIntervalRef.current) clearInterval(ringAudioIntervalRef.current);
 
@@ -193,6 +192,40 @@ export default function VideoCallModal({
     }
   }, []);
 
+  // Make a single clean PeerJS call to target
+  const triggerPeerCall = useCallback(() => {
+    if (!peerRef.current || peerRef.current.destroyed || !targetPeerId || callInitiatedRef.current) return;
+    callInitiatedRef.current = true;
+
+    const streamToUse = localStreamRef.current || createSyntheticAudioStream();
+    console.log(`[PeerJS] Dialing target peer: ${targetPeerId}`);
+
+    const call = peerRef.current.call(targetPeerId, streamToUse);
+    if (call) {
+      activeMediaConnRef.current = call;
+
+      call.on("stream", (remoteStream) => {
+        console.log("[PeerJS] Stream received from partner");
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+          remoteVideoRef.current.play().catch(() => {});
+        }
+        setCallState("CONNECTED");
+      });
+
+      call.on("close", () => {
+        console.log("[PeerJS] Call closed");
+        setCallState("ENDED");
+        handleCleanClose();
+        onClose();
+      });
+
+      call.on("error", (err) => {
+        console.error("[PeerJS Call Error]:", err);
+      });
+    }
+  }, [targetPeerId, handleCleanClose, onClose]);
+
   // Hot-swap media stream with real camera/mic if permission was delayed
   const enableRealMedia = useCallback(async () => {
     try {
@@ -210,30 +243,21 @@ export default function VideoCallModal({
         setIsVideoDisabled(false);
       }
 
-      // If call is active, re-call with real stream
+      // If call is active, re-dial or replace track
       if (peerRef.current && targetPeerId) {
-        const call = peerRef.current.call(targetPeerId, stream);
-        if (call) {
-          activeMediaConnRef.current = call;
-          call.on("stream", (remoteStream) => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.srcObject = remoteStream;
-              remoteVideoRef.current.play().catch(() => {});
-            }
-            setCallState("CONNECTED");
-          });
-        }
+        callInitiatedRef.current = false;
+        triggerPeerCall();
       }
     } catch (err: any) {
       console.error("Enable media retry error:", err);
       setPermissionDenied(true);
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setErrorMessage("Camera/Microphone access was blocked. Click the lock 🔒 icon next to your website address bar to allow permissions.");
+        setErrorMessage("Camera/Microphone permission was denied. Tap the 🎚️ Settings or 🔒 Lock icon next to the URL above to allow permissions.");
       } else {
         setErrorMessage("Could not open camera/mic: " + (err.message || "Unknown error"));
       }
     }
-  }, [isVideoCall, targetPeerId]);
+  }, [isVideoCall, targetPeerId, triggerPeerCall]);
 
   // Main Call Initializer using PeerJS
   const startPeerCall = useCallback(async () => {
@@ -259,11 +283,7 @@ export default function VideoCallModal({
           stream = createSyntheticAudioStream();
           setPermissionDenied(true);
           setIsVideoDisabled(true);
-          if (typeof window !== "undefined" && window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
-            setErrorMessage("Browsers require an HTTPS secure connection (SSL) to enable camera and microphone.");
-          } else {
-            setErrorMessage("Camera/Microphone permission was denied. Click the lock 🔒 icon in your browser address bar to allow permissions.");
-          }
+          setErrorMessage("Camera/Microphone permission was denied. Tap the 🎚️ Settings or 🔒 Lock icon next to the URL above to allow permissions.");
         }
       }
 
@@ -278,51 +298,17 @@ export default function VideoCallModal({
       peerRef.current = peer;
 
       peer.on("open", (id) => {
-        console.log(`[PeerJS Ready] My Peer ID: ${id}`);
+        console.log(`[PeerJS Ready] Peer connected with ID: ${id}`);
 
-        if (isInitiator && targetPeerId) {
+        if (isInitiator) {
           setCallState("CALLING");
-
-          // Send HTTP Ring signal for UI notification
           sendSignal("CALL_RING", {
             callerName: currentUserName,
             callerAvatar: currentUserAvatar,
             isVideo: isVideoCall,
           });
-
-          // Attempt call
-          const makeCall = () => {
-            if (!peerRef.current || peerRef.current.destroyed || !localStreamRef.current) return;
-            const call = peerRef.current.call(targetPeerId, localStreamRef.current);
-            if (call) {
-              activeMediaConnRef.current = call;
-
-              call.on("stream", (remoteStream) => {
-                console.log("[PeerJS Stream Received]");
-                if (remoteVideoRef.current) {
-                  remoteVideoRef.current.srcObject = remoteStream;
-                  remoteVideoRef.current.play().catch(() => {});
-                }
-                setCallState("CONNECTED");
-                if (callAttemptIntervalRef.current) clearInterval(callAttemptIntervalRef.current);
-              });
-
-              call.on("close", () => {
-                console.log("[PeerJS Call Closed by Remote]");
-                setCallState("ENDED");
-                handleCleanClose();
-                onClose();
-              });
-
-              call.on("error", (err) => {
-                console.error("[PeerJS Call Error]:", err);
-              });
-            }
-          };
-
-          makeCall();
-          // Retry calling target peer every 2 seconds until connected
-          callAttemptIntervalRef.current = setInterval(makeCall, 2000);
+          // Attempt initial call
+          triggerPeerCall();
         } else {
           setCallState("CONNECTING");
           sendSignal("CALL_ACCEPT", { acceptedBy: currentUserId });
@@ -338,13 +324,12 @@ export default function VideoCallModal({
         incomingCall.answer(localStreamRef.current || createSyntheticAudioStream());
 
         incomingCall.on("stream", (remoteStream) => {
-          console.log("[PeerJS Connected & Stream Attached]");
+          console.log("[PeerJS Connected & Remote Stream Attached]");
           if (remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = remoteStream;
             remoteVideoRef.current.play().catch(() => {});
           }
           setCallState("CONNECTED");
-          if (callAttemptIntervalRef.current) clearInterval(callAttemptIntervalRef.current);
         });
 
         incomingCall.on("close", () => {
@@ -360,25 +345,25 @@ export default function VideoCallModal({
       });
 
       peer.on("error", (err) => {
-        console.error("[PeerJS Engine Error]:", err);
+        console.warn("[PeerJS Notice]:", err.type);
       });
     } catch (err: any) {
       console.error("[Start Peer Call Failed]:", err);
     }
   }, [
     myPeerId,
-    targetPeerId,
     isInitiator,
     isVideoCall,
     currentUserName,
     currentUserAvatar,
     currentUserId,
     sendSignal,
+    triggerPeerCall,
     handleCleanClose,
     onClose,
   ]);
 
-  // HTTP Signal Listener for Backup Hangup Sync
+  // HTTP Signal Listener for Ringing & Hangup Sync
   useEffect(() => {
     startPeerCall();
 
@@ -388,7 +373,11 @@ export default function VideoCallModal({
         const data = await res.json();
         if (data.signals && data.signals.length > 0) {
           for (const s of data.signals) {
-            if (s.type === "HANGUP" || s.type === "CALL_DECLINE") {
+            if (s.type === "CALL_ACCEPT" && isInitiator) {
+              setCallState("CONNECTING");
+              callInitiatedRef.current = false;
+              triggerPeerCall();
+            } else if (s.type === "HANGUP" || s.type === "CALL_DECLINE") {
               setCallState("ENDED");
               handleCleanClose();
               onClose();
@@ -396,12 +385,12 @@ export default function VideoCallModal({
           }
         }
       } catch {}
-    }, 800);
+    }, 600);
 
     return () => {
       handleCleanClose();
     };
-  }, [roomId, startPeerCall, handleCleanClose, onClose]);
+  }, [roomId, startPeerCall, isInitiator, triggerPeerCall, handleCleanClose, onClose]);
 
   // Live Timer during active call
   useEffect(() => {
@@ -524,8 +513,8 @@ export default function VideoCallModal({
                   </div>
                   <ol className="text-[11px] text-zinc-400 list-decimal list-inside space-y-1">
                     <li>Look at the address/URL bar at the top of your browser.</li>
-                    <li>Click the <strong>Lock 🔒</strong> or <strong>Settings 🎚️</strong> icon next to the URL.</li>
-                    <li>Turn <strong>Camera</strong> and <strong>Microphone</strong> to <strong>Allow</strong>.</li>
+                    <li>Tap the <strong>Settings 🎚️</strong> or <strong>Lock 🔒</strong> icon next to the URL.</li>
+                    <li>Tap <strong>Permissions</strong> and set <strong>Camera</strong> and <strong>Microphone</strong> to <strong>Allow</strong>.</li>
                   </ol>
                   <button
                     onClick={enableRealMedia}
