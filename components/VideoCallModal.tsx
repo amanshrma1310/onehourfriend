@@ -32,7 +32,6 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
     { urls: "stun:stun.services.mozilla.com" },
     { urls: "stun:stun.cloudflare.com:3478" },
     {
@@ -114,6 +113,7 @@ export default function VideoCallModal({
   const pollTimerRef = useRef<any>(null);
   const ringAudioTimerRef = useRef<any>(null);
   const ringHeartbeatTimerRef = useRef<any>(null);
+  const isClosingRef = useRef(false);
 
   // Send signaling message
   const sendSignal = useCallback(
@@ -186,6 +186,9 @@ export default function VideoCallModal({
 
   // Clean shutdown
   const handleCleanClose = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     if (ringAudioTimerRef.current) clearInterval(ringAudioTimerRef.current);
     if (ringHeartbeatTimerRef.current) clearInterval(ringHeartbeatTimerRef.current);
@@ -348,7 +351,7 @@ export default function VideoCallModal({
     pollTimerRef.current = setInterval(async () => {
       try {
         const res = await fetch(`/api/call/signal?roomId=${roomId}`);
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (data.signals && data.signals.length > 0) {
           for (const s of data.signals) {

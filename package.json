@@ -20,6 +20,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.21.0",
+    "agora-rtc-sdk-ng": "^4.24.7",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "dotenv": "^17.4.2",
