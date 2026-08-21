@@ -360,11 +360,27 @@ export default function Dashboard() {
     }
   }
 
-  function startFriendCall(isVideo = true) {
+  async function startFriendCall(isVideo = true) {
     const friendUser = activeFriendship?.partner || activeFriendship?.friend;
     const friendshipId = activeFriendship?.id || activeFriendship?.friendshipId;
     if (!friendUser || !friendshipId || !currentUser) return;
     requestNotificationPermission();
+
+    let initialStream: MediaStream | null = null;
+    try {
+      initialStream = await navigator.mediaDevices.getUserMedia({
+        video: isVideo ? { facingMode: "user" } : false,
+        audio: true,
+      });
+    } catch {
+      try {
+        initialStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+      } catch {
+        try {
+          initialStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {}
+      }
+    }
 
     setActiveCall({
       roomId: `friendship_${friendshipId}`,
@@ -376,11 +392,29 @@ export default function Dashboard() {
       partnerAvatar: friendUser.avatar || "✨",
       isVideoCall: isVideo,
       isInitiator: true,
+      initialStream,
     });
   }
 
-  function acceptIncomingCall() {
+  async function acceptIncomingCall() {
     if (!incomingCall || !currentUser) return;
+
+    let initialStream: MediaStream | null = null;
+    try {
+      initialStream = await navigator.mediaDevices.getUserMedia({
+        video: incomingCall.isVideo ? { facingMode: "user" } : false,
+        audio: true,
+      });
+    } catch {
+      try {
+        initialStream = await navigator.mediaDevices.getUserMedia({ video: incomingCall.isVideo, audio: true });
+      } catch {
+        try {
+          initialStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {}
+      }
+    }
+
     setActiveCall({
       roomId: incomingCall.roomId,
       currentUserId: currentUser.id,
@@ -391,6 +425,7 @@ export default function Dashboard() {
       partnerAvatar: incomingCall.partnerAvatar,
       isVideoCall: incomingCall.isVideo,
       isInitiator: false,
+      initialStream,
     });
     setIncomingCall(null);
   }
@@ -1677,6 +1712,7 @@ export default function Dashboard() {
           partnerAvatar={activeCall.partnerAvatar}
           isVideoCall={activeCall.isVideoCall}
           isInitiator={activeCall.isInitiator}
+          initialStream={activeCall.initialStream}
           onClose={() => setActiveCall(null)}
         />
       )}

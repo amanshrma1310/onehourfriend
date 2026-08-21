@@ -22,6 +22,7 @@ interface VideoCallModalProps {
   partnerAvatar: string;
   isVideoCall?: boolean;
   isInitiator?: boolean;
+  initialStream?: MediaStream | null;
   onClose: () => void;
 }
 
@@ -31,6 +32,7 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
     { urls: "stun:stun.services.mozilla.com" },
     { urls: "stun:stun.cloudflare.com:3478" },
     {
@@ -93,24 +95,25 @@ export default function VideoCallModal({
   partnerAvatar,
   isVideoCall = true,
   isInitiator = true,
+  initialStream = null,
   onClose,
 }: VideoCallModalProps) {
   const [callState, setCallState] = useState<"CALLING" | "CONNECTING" | "CONNECTED" | "ENDED">("CALLING");
   const [isAudioMuted, setIsAudioMuted] = useState(false);
-  const [isVideoDisabled, setIsVideoDisabled] = useState(!isVideoCall);
+  const [isVideoDisabled, setIsVideoDisabled] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
-  const [hasRealMedia, setHasRealMedia] = useState(false);
+  const [hasRealMedia, setHasRealMedia] = useState(!!initialStream);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(initialStream);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const iceCandidatesQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const processedSignalIdsRef = useRef<Set<string>>(new Set());
   const pollTimerRef = useRef<any>(null);
   const ringAudioTimerRef = useRef<any>(null);
-  const hasOfferedRef = useRef(false);
+  const ringHeartbeatTimerRef = useRef<any>(null);
 
   // Send signaling message
   const sendSignal = useCallback(
@@ -185,6 +188,7 @@ export default function VideoCallModal({
   const handleCleanClose = useCallback(() => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     if (ringAudioTimerRef.current) clearInterval(ringAudioTimerRef.current);
+    if (ringHeartbeatTimerRef.current) clearInterval(ringHeartbeatTimerRef.current);
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -202,7 +206,7 @@ export default function VideoCallModal({
     }
   }, []);
 
-  // Allow user to request camera & mic directly via user gesture
+  // Allow user to request camera & mic directly via user gesture if needed
   const enableUserMedia = useCallback(async () => {
     const stream = await requestUserMedia(isVideoCall);
     if (stream) {
@@ -230,15 +234,18 @@ export default function VideoCallModal({
 
   // Main Call Initializer
   const initWebRTC = useCallback(async () => {
-    // 1. Get initial media (or synthetic fallback so connection never halts)
-    let stream = await requestUserMedia(isVideoCall);
-    if (stream) {
-      setHasRealMedia(true);
-      setIsVideoDisabled(stream.getVideoTracks().length === 0);
-    } else {
+    // 1. Get initial stream
+    let stream = localStreamRef.current;
+    if (!stream) {
+      stream = await requestUserMedia(isVideoCall);
+    }
+    if (!stream) {
       stream = createSyntheticAudioStream();
       setHasRealMedia(false);
       setIsVideoDisabled(true);
+    } else {
+      setHasRealMedia(true);
+      setIsVideoDisabled(stream.getVideoTracks().length === 0);
     }
 
     localStreamRef.current = stream;
@@ -251,7 +258,7 @@ export default function VideoCallModal({
     pcRef.current = pc;
 
     // Add local tracks
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream!));
 
     // Handle remote tracks
     pc.ontrack = (event) => {
@@ -278,7 +285,6 @@ export default function VideoCallModal({
     };
 
     pc.oniceconnectionstatechange = () => {
-      console.log("[WebRTC ICE State]:", pc.iceConnectionState);
       if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
         setCallState("CONNECTED");
       } else if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
@@ -287,7 +293,6 @@ export default function VideoCallModal({
     };
 
     pc.onconnectionstatechange = () => {
-      console.log("[WebRTC Connection State]:", pc.connectionState);
       if (pc.connectionState === "connected") {
         setCallState("CONNECTED");
       } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
@@ -309,13 +314,32 @@ export default function VideoCallModal({
         offerToReceiveVideo: isVideoCall,
       });
       await pc.setLocalDescription(offer);
-      hasOfferedRef.current = true;
       sendSignal("OFFER", offer);
     } else {
       setCallState("CONNECTING");
       sendSignal("CALL_ACCEPT", { acceptedBy: currentUserId });
     }
   }, [isInitiator, isVideoCall, currentUserName, currentUserAvatar, currentUserId, sendSignal]);
+
+  // Continuous ring pulse for caller
+  useEffect(() => {
+    if (isInitiator && callState === "CALLING") {
+      ringHeartbeatTimerRef.current = setInterval(() => {
+        sendSignal("CALL_RING", {
+          callerName: currentUserName,
+          callerAvatar: currentUserAvatar,
+          isVideo: isVideoCall,
+        });
+        if (pcRef.current?.localDescription) {
+          sendSignal("OFFER", pcRef.current.localDescription);
+        }
+      }, 2500);
+    }
+
+    return () => {
+      if (ringHeartbeatTimerRef.current) clearInterval(ringHeartbeatTimerRef.current);
+    };
+  }, [isInitiator, callState, currentUserName, currentUserAvatar, isVideoCall, sendSignal]);
 
   // Signaling Polling Loop
   useEffect(() => {
@@ -375,7 +399,7 @@ export default function VideoCallModal({
       } catch (err) {
         console.error("Poll signal error:", err);
       }
-    }, 400);
+    }, 350);
 
     return () => {
       handleCleanClose();
@@ -493,18 +517,18 @@ export default function VideoCallModal({
               </h2>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
                 {callState === "CALLING"
-                  ? "Waiting for your friend to accept the call..."
-                  : "Establishing secure peer-to-peer connection..."}
+                  ? "Waiting for your friend to answer..."
+                  : "Connecting live audio and video..."}
               </p>
 
               {!hasRealMedia && (
-                <div className="pt-3 max-w-sm mx-auto">
+                <div className="pt-2 max-w-sm mx-auto">
                   <button
                     onClick={enableUserMedia}
-                    className="bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl shadow-[#872bf5]/40 flex items-center gap-2 mx-auto transition hover:scale-105 active:scale-95"
+                    className="bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold px-5 py-2.5 rounded-2xl shadow-xl shadow-[#872bf5]/40 flex items-center gap-2 mx-auto transition hover:scale-105 active:scale-95"
                   >
                     <Camera className="w-4 h-4" />
-                    <span>Turn On Camera & Microphone</span>
+                    <span>Turn On Camera</span>
                   </button>
                 </div>
               )}
@@ -527,14 +551,6 @@ export default function VideoCallModal({
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#181824] text-zinc-400 text-xs gap-1 p-2 text-center">
               <VideoOff className="w-5 h-5 text-zinc-500" />
               <span className="text-[10px] font-bold">Camera Off</span>
-              {!hasRealMedia && (
-                <button
-                  onClick={enableUserMedia}
-                  className="text-[9px] text-purple-300 underline font-bold mt-1"
-                >
-                  Turn On
-                </button>
-              )}
             </div>
           )}
           <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-bold text-white">

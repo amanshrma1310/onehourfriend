@@ -243,9 +243,26 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  function startVideoCall(isVideo = true) {
+  async function startVideoCall(isVideo = true) {
     if (!currentUser || !partner) return;
     requestNotificationPermission();
+
+    let initialStream: MediaStream | null = null;
+    try {
+      initialStream = await navigator.mediaDevices.getUserMedia({
+        video: isVideo ? { facingMode: "user" } : false,
+        audio: true,
+      });
+    } catch {
+      try {
+        initialStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+      } catch {
+        try {
+          initialStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {}
+      }
+    }
+
     setActiveCall({
       roomId: `session_${sessionId}`,
       currentUserId: currentUser.id,
@@ -256,11 +273,29 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
       partnerAvatar: partner.avatar || "🌙",
       isVideoCall: isVideo,
       isInitiator: true,
+      initialStream,
     });
   }
 
-  function acceptIncomingCall() {
+  async function acceptIncomingCall() {
     if (!incomingCall || !currentUser || !partner) return;
+
+    let initialStream: MediaStream | null = null;
+    try {
+      initialStream = await navigator.mediaDevices.getUserMedia({
+        video: incomingCall.isVideo ? { facingMode: "user" } : false,
+        audio: true,
+      });
+    } catch {
+      try {
+        initialStream = await navigator.mediaDevices.getUserMedia({ video: incomingCall.isVideo, audio: true });
+      } catch {
+        try {
+          initialStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {}
+      }
+    }
+
     setActiveCall({
       roomId: incomingCall.roomId,
       currentUserId: currentUser.id,
@@ -271,6 +306,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
       partnerAvatar: partner.avatar || "🌙",
       isVideoCall: incomingCall.isVideo,
       isInitiator: false,
+      initialStream,
     });
     setIncomingCall(null);
   }
@@ -1180,6 +1216,7 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
           partnerAvatar={activeCall.partnerAvatar}
           isVideoCall={activeCall.isVideoCall}
           isInitiator={activeCall.isInitiator}
+          initialStream={activeCall.initialStream}
           onClose={() => setActiveCall(null)}
         />
       )}
