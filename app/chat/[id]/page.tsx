@@ -128,7 +128,12 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
   async function loadSession() {
     try {
       const res = await fetch(`/api/session/${sessionId}`);
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Chat session not found or connection lost.");
+      }
 
       if (!res.ok || !data.session) {
         throw new Error(data.error || "Failed to load session");
@@ -168,7 +173,12 @@ export default function ChatRoom({ params }: { params: Promise<{ id: string }> }
       const lastMsg = messages[messages.length - 1];
       const after = lastMsg?.createdAt || "";
       const res = await fetch(`/api/session/${sessionId}/poll?after=${encodeURIComponent(after)}`);
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        return;
+      }
 
       if (data.messages && data.messages.length > 0) {
         setMessages((prev) => {

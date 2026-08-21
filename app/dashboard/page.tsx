@@ -490,7 +490,13 @@ export default function Dashboard() {
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Handle non-JSON HTML error page gracefully
+        data = {};
+      }
 
       if (data.sessionId) {
         setIsMatching(false);
@@ -502,8 +508,8 @@ export default function Dashboard() {
         setMatchSearchSeconds((s) => s + 1);
         try {
           const pollRes = await fetch("/api/match/status");
-          const pollData = await pollRes.json();
-          if (pollData.sessionId) {
+          const pollData = await pollRes.json().catch(() => ({}));
+          if (pollData && pollData.sessionId) {
             clearInterval(matchIntervalRef.current);
             setIsMatching(false);
             router.push(`/chat/${pollData.sessionId}`);
@@ -511,7 +517,7 @@ export default function Dashboard() {
         } catch {}
       }, 1000);
     } catch (err: any) {
-      alert(err.message || "Failed to start matchmaker");
+      console.warn("Matchmaking error:", err);
       setIsMatching(false);
     }
   }
