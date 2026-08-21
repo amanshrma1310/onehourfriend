@@ -11,11 +11,11 @@ const securityHeaders = [
   },
   {
     key: "X-Frame-Options",
-    value: "DENY", // Prevents Clickjacking
+    value: "SAMEORIGIN",
   },
   {
     key: "X-Content-Type-Options",
-    value: "nosniff", // Prevents MIME Sniffing attacks
+    value: "nosniff",
   },
   {
     key: "Referrer-Policy",
@@ -23,22 +23,19 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
-  },
-  {
-    key: "X-XSS-Protection",
-    value: "1; mode=block", // Cross-Site Scripting block
+    value: "camera=(self), microphone=(self), display-capture=(self)",
   },
   {
     key: "Content-Security-Policy",
     value: `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval';
-      style-src 'self' 'unsafe-inline';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https:;
+      style-src 'self' 'unsafe-inline' https:;
       img-src 'self' data: blob: https:;
-      font-src 'self' data:;
-      connect-src 'self';
-      frame-ancestors 'none';
+      media-src 'self' blob: data:;
+      font-src 'self' data: https:;
+      connect-src 'self' https: wss: ws: stun: turn:;
+      frame-ancestors 'self';
       base-uri 'self';
       form-action 'self';
     `.replace(/\s{2,}/g, " ").trim(),
