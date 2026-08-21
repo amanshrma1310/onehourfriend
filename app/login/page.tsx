@@ -32,7 +32,12 @@ export default function Login() {
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Unable to connect to server. Please try again.");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to log in");
@@ -57,7 +62,12 @@ export default function Login() {
         body: JSON.stringify({ index }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Unable to connect to server. Please try again.");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed demo login");

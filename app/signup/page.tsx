@@ -52,7 +52,12 @@ export default function Signup() {
         body: JSON.stringify({ email: cleanEmail }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Unable to connect to verification server. Please try again.");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to send code to email");
@@ -114,7 +119,12 @@ export default function Signup() {
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Unable to connect to server. Please try again.");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to create account");
