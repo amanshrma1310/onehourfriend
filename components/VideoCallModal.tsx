@@ -450,9 +450,9 @@ export default function VideoCallModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-3 md:p-6 select-none animate-fade-in">
+    <div className="fixed inset-0 z-50 h-[100dvh] w-screen bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-3 md:p-6 select-none overflow-hidden">
       {/* Top Header Strip */}
-      <div className="w-full max-w-5xl flex items-center justify-between z-20">
+      <div className="w-full max-w-5xl flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-[#872bf5] flex items-center justify-center text-xl shadow-lg shadow-[#872bf5]/40">
             {partnerAvatar}
