@@ -9,9 +9,8 @@ import {
   PhoneOff,
   ShieldCheck,
   RefreshCw,
-  AlertCircle,
+  Camera,
 } from "lucide-react";
-import type { Peer as PeerInstance, MediaConnection } from "peerjs";
 
 interface VideoCallModalProps {
   roomId: string;
@@ -26,31 +25,25 @@ interface VideoCallModalProps {
   onClose: () => void;
 }
 
-const PEER_CONFIG = {
-  host: "0.peerjs.com",
-  port: 443,
-  path: "/",
-  secure: true,
-  config: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:stun3.l.google.com:19302" },
-      { urls: "stun:stun.services.mozilla.com" },
-      { urls: "stun:stun.cloudflare.com:3478" },
-      {
-        urls: [
-          "turn:openrelay.metered.ca:80",
-          "turn:openrelay.metered.ca:443",
-          "turn:openrelay.metered.ca:443?transport=tcp",
-        ],
-        username: "openrelay",
-        credential: "openrelay",
-      },
-    ],
-    iceCandidatePoolSize: 10,
-  },
+const RTC_CONFIG: RTCConfiguration = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun.services.mozilla.com" },
+    { urls: "stun:stun.cloudflare.com:3478" },
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp",
+      ],
+      username: "openrelay",
+      credential: "openrelay",
+    },
+  ],
+  iceCandidatePoolSize: 10,
 };
 
 function createSyntheticAudioStream(): MediaStream {
@@ -74,6 +67,22 @@ function createSyntheticAudioStream(): MediaStream {
   return new MediaStream();
 }
 
+async function requestUserMedia(isVideo: boolean): Promise<MediaStream | null> {
+  const tryConstraints: MediaStreamConstraints[] = [
+    { video: isVideo ? { facingMode: "user" } : false, audio: true },
+    { video: isVideo, audio: true },
+    { audio: true, video: false },
+  ];
+
+  for (const c of tryConstraints) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(c);
+      if (stream) return stream;
+    } catch {}
+  }
+  return null;
+}
+
 export default function VideoCallModal({
   roomId,
   currentUserId,
@@ -90,26 +99,20 @@ export default function VideoCallModal({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(!isVideoCall);
   const [callDuration, setCallDuration] = useState(0);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [hasRealMedia, setHasRealMedia] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const peerRef = useRef<PeerInstance | null>(null);
-  const activeMediaConnRef = useRef<MediaConnection | null>(null);
-  const ringAudioIntervalRef = useRef<any>(null);
-  const httpSignalPollRef = useRef<any>(null);
-  const isClosingRef = useRef(false);
-  const callInitiatedRef = useRef(false);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+  const iceCandidatesQueueRef = useRef<RTCIceCandidateInit[]>([]);
+  const processedSignalIdsRef = useRef<Set<string>>(new Set());
+  const pollTimerRef = useRef<any>(null);
+  const ringAudioTimerRef = useRef<any>(null);
+  const hasOfferedRef = useRef(false);
 
-  const cleanRoomId = (roomId || "global").replace(/[^a-zA-Z0-9_-]/g, "_");
-  const myPeerId = `ohf_${(currentUserId || "usr").replace(/[^a-zA-Z0-9_-]/g, "_")}_${cleanRoomId}`;
-  const targetPeerId = partnerUserId
-    ? `ohf_${partnerUserId.replace(/[^a-zA-Z0-9_-]/g, "_")}_${cleanRoomId}`
-    : null;
-
-  // Helper: Send HTTP signal
+  // Send signaling message
   const sendSignal = useCallback(
     async (type: string, payload: any = {}) => {
       try {
@@ -125,7 +128,21 @@ export default function VideoCallModal({
     [roomId, partnerUserId]
   );
 
-  // Play pleasant Web Audio chime while calling
+  // Flush queued candidates
+  const flushIceCandidates = useCallback(async (pc: RTCPeerConnection) => {
+    while (iceCandidatesQueueRef.current.length > 0) {
+      const cand = iceCandidatesQueueRef.current.shift();
+      if (cand) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(cand));
+        } catch (e) {
+          console.warn("Flush candidate error:", e);
+        }
+      }
+    }
+  }, []);
+
+  // Pleasant ringing sound while dialing
   useEffect(() => {
     let ctx: AudioContext | null = null;
     if (callState === "CALLING") {
@@ -149,13 +166,13 @@ export default function VideoCallModal({
           };
 
           playRing();
-          ringAudioIntervalRef.current = setInterval(playRing, 3000);
+          ringAudioTimerRef.current = setInterval(playRing, 3000);
         }
       } catch {}
     }
 
     return () => {
-      if (ringAudioIntervalRef.current) clearInterval(ringAudioIntervalRef.current);
+      if (ringAudioTimerRef.current) clearInterval(ringAudioTimerRef.current);
       if (ctx && ctx.state !== "closed") {
         try {
           ctx.close();
@@ -164,219 +181,190 @@ export default function VideoCallModal({
     };
   }, [callState]);
 
-  // Clean close of tracks, peer, and connection
+  // Clean shutdown
   const handleCleanClose = useCallback(() => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-
-    if (httpSignalPollRef.current) clearInterval(httpSignalPollRef.current);
-    if (ringAudioIntervalRef.current) clearInterval(ringAudioIntervalRef.current);
-
-    if (activeMediaConnRef.current) {
-      try {
-        activeMediaConnRef.current.close();
-      } catch {}
-      activeMediaConnRef.current = null;
-    }
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (ringAudioTimerRef.current) clearInterval(ringAudioTimerRef.current);
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
     }
-
-    if (peerRef.current) {
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach((t) => t.stop());
+      remoteStreamRef.current = null;
+    }
+    if (pcRef.current) {
       try {
-        peerRef.current.destroy();
+        pcRef.current.close();
       } catch {}
-      peerRef.current = null;
+      pcRef.current = null;
     }
   }, []);
 
-  // Make a single clean PeerJS call to target
-  const triggerPeerCall = useCallback(() => {
-    if (!peerRef.current || peerRef.current.destroyed || !targetPeerId || callInitiatedRef.current) return;
-    callInitiatedRef.current = true;
-
-    const streamToUse = localStreamRef.current || createSyntheticAudioStream();
-    console.log(`[PeerJS] Dialing target peer: ${targetPeerId}`);
-
-    const call = peerRef.current.call(targetPeerId, streamToUse);
-    if (call) {
-      activeMediaConnRef.current = call;
-
-      call.on("stream", (remoteStream) => {
-        console.log("[PeerJS] Stream received from partner");
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.play().catch(() => {});
-        }
-        setCallState("CONNECTED");
-      });
-
-      call.on("close", () => {
-        console.log("[PeerJS] Call closed");
-        setCallState("ENDED");
-        handleCleanClose();
-        onClose();
-      });
-
-      call.on("error", (err) => {
-        console.error("[PeerJS Call Error]:", err);
-      });
-    }
-  }, [targetPeerId, handleCleanClose, onClose]);
-
-  // Hot-swap media stream with real camera/mic if permission was delayed
-  const enableRealMedia = useCallback(async () => {
-    try {
-      setErrorMessage(null);
-      setPermissionDenied(false);
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: isVideoCall ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
-        audio: true,
-      });
-
+  // Allow user to request camera & mic directly via user gesture
+  const enableUserMedia = useCallback(async () => {
+    const stream = await requestUserMedia(isVideoCall);
+    if (stream) {
       localStreamRef.current = stream;
+      setHasRealMedia(true);
+      setIsVideoDisabled(stream.getVideoTracks().length === 0);
+
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
-        setIsVideoDisabled(false);
       }
 
-      // If call is active, re-dial or replace track
-      if (peerRef.current && targetPeerId) {
-        callInitiatedRef.current = false;
-        triggerPeerCall();
-      }
-    } catch (err: any) {
-      console.error("Enable media retry error:", err);
-      setPermissionDenied(true);
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setErrorMessage("Camera/Microphone permission was denied. Tap the 🎚️ Settings or 🔒 Lock icon next to the URL above to allow permissions.");
-      } else {
-        setErrorMessage("Could not open camera/mic: " + (err.message || "Unknown error"));
-      }
-    }
-  }, [isVideoCall, targetPeerId, triggerPeerCall]);
-
-  // Main Call Initializer using PeerJS
-  const startPeerCall = useCallback(async () => {
-    try {
-      setErrorMessage(null);
-      setPermissionDenied(false);
-
-      // 1. Get Camera/Microphone access
-      let stream: MediaStream | null = null;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: isVideoCall ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
-          audio: true,
-        });
-        setIsVideoDisabled(!isVideoCall);
-      } catch (videoErr: any) {
-        console.warn("Video getUserMedia failed, trying audio-only:", videoErr);
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          setIsVideoDisabled(true);
-        } catch (audioErr: any) {
-          console.warn("Audio getUserMedia also failed, using synthetic fallback stream:", audioErr);
-          stream = createSyntheticAudioStream();
-          setPermissionDenied(true);
-          setIsVideoDisabled(true);
-          setErrorMessage("Camera/Microphone permission was denied. Tap the 🎚️ Settings or 🔒 Lock icon next to the URL above to allow permissions.");
-        }
-      }
-
-      localStreamRef.current = stream;
-      if (localVideoRef.current && stream.getVideoTracks().length > 0) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // 2. Dynamically import PeerJS (Client-side only)
-      const { Peer } = await import("peerjs");
-      const peer = new Peer(myPeerId, PEER_CONFIG);
-      peerRef.current = peer;
-
-      peer.on("open", (id) => {
-        console.log(`[PeerJS Ready] Peer connected with ID: ${id}`);
-
-        if (isInitiator) {
-          setCallState("CALLING");
-          sendSignal("CALL_RING", {
-            callerName: currentUserName,
-            callerAvatar: currentUserAvatar,
-            isVideo: isVideoCall,
-          });
-          // Attempt initial call
-          triggerPeerCall();
-        } else {
-          setCallState("CONNECTING");
-          sendSignal("CALL_ACCEPT", { acceptedBy: currentUserId });
-        }
-      });
-
-      // 3. Listen for Incoming Calls (for receiver or caller)
-      peer.on("call", (incomingCall) => {
-        console.log("[PeerJS Incoming Call Received from]:", incomingCall.peer);
-        activeMediaConnRef.current = incomingCall;
-
-        // Answer with local stream
-        incomingCall.answer(localStreamRef.current || createSyntheticAudioStream());
-
-        incomingCall.on("stream", (remoteStream) => {
-          console.log("[PeerJS Connected & Remote Stream Attached]");
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch(() => {});
+      if (pcRef.current) {
+        const senders = pcRef.current.getSenders();
+        stream.getTracks().forEach((newTrack) => {
+          const sender = senders.find((s) => s.track?.kind === newTrack.kind);
+          if (sender) {
+            sender.replaceTrack(newTrack);
+          } else {
+            pcRef.current?.addTrack(newTrack, stream);
           }
-          setCallState("CONNECTED");
         });
-
-        incomingCall.on("close", () => {
-          console.log("[PeerJS Call Ended]");
-          setCallState("ENDED");
-          handleCleanClose();
-          onClose();
-        });
-
-        incomingCall.on("error", (err) => {
-          console.error("[PeerJS Answer Error]:", err);
-        });
-      });
-
-      peer.on("error", (err) => {
-        console.warn("[PeerJS Notice]:", err.type);
-      });
-    } catch (err: any) {
-      console.error("[Start Peer Call Failed]:", err);
+      }
     }
-  }, [
-    myPeerId,
-    isInitiator,
-    isVideoCall,
-    currentUserName,
-    currentUserAvatar,
-    currentUserId,
-    sendSignal,
-    triggerPeerCall,
-    handleCleanClose,
-    onClose,
-  ]);
+  }, [isVideoCall]);
 
-  // HTTP Signal Listener for Ringing & Hangup Sync
+  // Main Call Initializer
+  const initWebRTC = useCallback(async () => {
+    // 1. Get initial media (or synthetic fallback so connection never halts)
+    let stream = await requestUserMedia(isVideoCall);
+    if (stream) {
+      setHasRealMedia(true);
+      setIsVideoDisabled(stream.getVideoTracks().length === 0);
+    } else {
+      stream = createSyntheticAudioStream();
+      setHasRealMedia(false);
+      setIsVideoDisabled(true);
+    }
+
+    localStreamRef.current = stream;
+    if (localVideoRef.current && stream.getVideoTracks().length > 0) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+    // 2. Create RTCPeerConnection
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    pcRef.current = pc;
+
+    // Add local tracks
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
+    // Handle remote tracks
+    pc.ontrack = (event) => {
+      console.log("[WebRTC] Incoming remote track:", event.track.kind);
+      if (event.streams && event.streams[0]) {
+        remoteStreamRef.current = event.streams[0];
+      } else {
+        if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream();
+        remoteStreamRef.current.addTrack(event.track);
+      }
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        remoteVideoRef.current.play().catch(() => {});
+      }
+      setCallState("CONNECTED");
+    };
+
+    // Handle ICE Candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendSignal("CANDIDATE", event.candidate);
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("[WebRTC ICE State]:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        setCallState("CONNECTED");
+      } else if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+        setCallState("ENDED");
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log("[WebRTC Connection State]:", pc.connectionState);
+      if (pc.connectionState === "connected") {
+        setCallState("CONNECTED");
+      } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+        setCallState("ENDED");
+      }
+    };
+
+    if (isInitiator) {
+      setCallState("CALLING");
+      sendSignal("CALL_RING", {
+        callerName: currentUserName,
+        callerAvatar: currentUserAvatar,
+        isVideo: isVideoCall,
+      });
+
+      // Create Offer
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: isVideoCall,
+      });
+      await pc.setLocalDescription(offer);
+      hasOfferedRef.current = true;
+      sendSignal("OFFER", offer);
+    } else {
+      setCallState("CONNECTING");
+      sendSignal("CALL_ACCEPT", { acceptedBy: currentUserId });
+    }
+  }, [isInitiator, isVideoCall, currentUserName, currentUserAvatar, currentUserId, sendSignal]);
+
+  // Signaling Polling Loop
   useEffect(() => {
-    startPeerCall();
+    initWebRTC();
 
-    httpSignalPollRef.current = setInterval(async () => {
+    pollTimerRef.current = setInterval(async () => {
       try {
         const res = await fetch(`/api/call/signal?roomId=${roomId}`);
         const data = await res.json();
+
         if (data.signals && data.signals.length > 0) {
           for (const s of data.signals) {
+            if (processedSignalIdsRef.current.has(s.id)) continue;
+            processedSignalIdsRef.current.add(s.id);
+
+            const pc = pcRef.current;
+            if (!pc) continue;
+
             if (s.type === "CALL_ACCEPT" && isInitiator) {
               setCallState("CONNECTING");
-              callInitiatedRef.current = false;
-              triggerPeerCall();
+              if (pc.localDescription) {
+                sendSignal("OFFER", pc.localDescription);
+              }
+            } else if (s.type === "OFFER") {
+              if (pc.signalingState === "stable" || pc.signalingState === "have-local-offer") {
+                await pc.setRemoteDescription(new RTCSessionDescription(s.payload));
+                await flushIceCandidates(pc);
+
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                sendSignal("ANSWER", answer);
+                setCallState("CONNECTED");
+              }
+            } else if (s.type === "ANSWER") {
+              if (pc.signalingState === "have-local-offer") {
+                await pc.setRemoteDescription(new RTCSessionDescription(s.payload));
+                await flushIceCandidates(pc);
+                setCallState("CONNECTED");
+              }
+            } else if (s.type === "CANDIDATE") {
+              if (pc.remoteDescription && pc.remoteDescription.type) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(s.payload));
+                } catch (e) {
+                  console.warn("Candidate add error:", e);
+                }
+              } else {
+                iceCandidatesQueueRef.current.push(s.payload);
+              }
             } else if (s.type === "HANGUP" || s.type === "CALL_DECLINE") {
               setCallState("ENDED");
               handleCleanClose();
@@ -384,15 +372,17 @@ export default function VideoCallModal({
             }
           }
         }
-      } catch {}
-    }, 600);
+      } catch (err) {
+        console.error("Poll signal error:", err);
+      }
+    }, 400);
 
     return () => {
       handleCleanClose();
     };
-  }, [roomId, startPeerCall, isInitiator, triggerPeerCall, handleCleanClose, onClose]);
+  }, [roomId, initWebRTC, isInitiator, sendSignal, flushIceCandidates, handleCleanClose, onClose]);
 
-  // Live Timer during active call
+  // Live Timer
   useEffect(() => {
     let timer: any = null;
     if (callState === "CONNECTED") {
@@ -501,27 +491,20 @@ export default function VideoCallModal({
                   ? `Connecting with ${partnerName}...`
                   : "Call Ended"}
               </h2>
-              <p className="text-xs text-zinc-300 max-w-sm mx-auto leading-relaxed">
-                {errorMessage || "Establishing direct peer-to-peer HD encrypted video connection..."}
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                {callState === "CALLING"
+                  ? "Waiting for your friend to accept the call..."
+                  : "Establishing secure peer-to-peer connection..."}
               </p>
 
-              {permissionDenied && (
-                <div className="pt-3 max-w-sm mx-auto bg-[#181824] border border-amber-500/40 p-4 rounded-2xl space-y-2.5 text-left shadow-xl">
-                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
-                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>How to enable Camera & Microphone:</span>
-                  </div>
-                  <ol className="text-[11px] text-zinc-400 list-decimal list-inside space-y-1">
-                    <li>Look at the address/URL bar at the top of your browser.</li>
-                    <li>Tap the <strong>Settings 🎚️</strong> or <strong>Lock 🔒</strong> icon next to the URL.</li>
-                    <li>Tap <strong>Permissions</strong> and set <strong>Camera</strong> and <strong>Microphone</strong> to <strong>Allow</strong>.</li>
-                  </ol>
+              {!hasRealMedia && (
+                <div className="pt-3 max-w-sm mx-auto">
                   <button
-                    onClick={enableRealMedia}
-                    className="w-full bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-black py-2.5 rounded-xl shadow-lg shadow-[#872bf5]/40 flex items-center justify-center gap-1.5 transition hover:scale-105 active:scale-95"
+                    onClick={enableUserMedia}
+                    className="bg-[#872bf5] hover:bg-[#7417e3] text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-xl shadow-[#872bf5]/40 flex items-center gap-2 mx-auto transition hover:scale-105 active:scale-95"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Request Camera & Mic Access</span>
+                    <Camera className="w-4 h-4" />
+                    <span>Turn On Camera & Microphone</span>
                   </button>
                 </div>
               )}
@@ -544,12 +527,12 @@ export default function VideoCallModal({
             <div className="w-full h-full flex flex-col items-center justify-center bg-[#181824] text-zinc-400 text-xs gap-1 p-2 text-center">
               <VideoOff className="w-5 h-5 text-zinc-500" />
               <span className="text-[10px] font-bold">Camera Off</span>
-              {permissionDenied && (
+              {!hasRealMedia && (
                 <button
-                  onClick={enableRealMedia}
+                  onClick={enableUserMedia}
                   className="text-[9px] text-purple-300 underline font-bold mt-1"
                 >
-                  Enable
+                  Turn On
                 </button>
               )}
             </div>
